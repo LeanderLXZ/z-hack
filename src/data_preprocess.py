@@ -29,7 +29,11 @@ def preprocess(df, mode):
     df_preprocessed = pd.DataFrame()
     df_preprocessed['CONTNUM_' + suffix] = df_grouped['CONTNUM'].sum()
     df_preprocessed['VOLUME_' + suffix] = df_grouped['VOLUME'].sum()
-    df_preprocessed['CONTPRICE_' + suffix] = df_grouped['CONTPRICE'].mean()
+    df_preprocessed['CONTPRICE_' + suffix] = \
+        df_preprocessed['VOLUME_' + suffix] / \
+        df_preprocessed['CONTNUM_' + suffix]
+    # df_preprocessed['CONTPRICE_' + suffix + '_AVG'] = \
+    #     df_grouped['CONTPRICE'].mean()
 
     if mode == 'd':
         df_preprocessed.index = df_preprocessed.index.rename('DAY')
