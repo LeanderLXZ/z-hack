@@ -1,5 +1,10 @@
 import time
+import utils
+from os.path import join
 import pandas as pd
+
+source_path = '../data/source_data'
+preprocessed_path = '../data/preprocessed_data'
 
 
 # Load CSV Files Using Pandas
@@ -45,27 +50,42 @@ def preprocess(df, mode):
     return df_preprocessed
 
 
+def output_rows(df):
+
+    df = df.iloc
+
+
 if __name__ == '__main__':
 
     time_ = time.time()
+
+    utils.thick_line()
+    print('Start preprocessing...')
+
+    utils.check_dir([preprocessed_path])
 
     df_day = []
     df_month = []
     df_year = []
 
     for year in ['2009', '2010', '2011', '2012', '2013']:
+        print('Preprocessing data in {}...'.format(year))
         df_loaded = load_csv(
-            '../data/source_data/z_hack_transaction_{}.csv'.format(year))
+            join(source_path, 'z_hack_transaction_{}_new.csv'.format(year)))
         df_day.append(preprocess(df_loaded, 'd'))
         df_month.append(preprocess(df_loaded, 'm'))
         df_year.append(preprocess(df_loaded, 'y'))
 
+    print('Concatenating data...')
     df_total_day: pd.DataFrame = pd.concat(df_day)
     df_total_month: pd.DataFrame = pd.concat(df_month)
     df_total_year: pd.DataFrame = pd.concat(df_year)
 
-    df_total_day.to_csv('../data/source_data/total_day.csv')
-    df_total_month.to_csv('../data/source_data/total_month.csv')
-    df_total_year.to_csv('../data/source_data/total_year.csv')
+    print('Writing data to CSV...')
+    df_total_day.to_csv(join(preprocessed_path, 'total_day.csv'))
+    df_total_month.to_csv(join(preprocessed_path, 'total_month.csv'))
+    df_total_year.to_csv(join(preprocessed_path, 'total_year.csv'))
 
+    utils.thin_line()
     print('Finished! Using time: {:.2f}s'.format( time.time() - time_))
+    utils.thick_line()

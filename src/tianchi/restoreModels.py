@@ -4,8 +4,10 @@ import numpy as np
 from timeModels import *
 import re
 
+
 #复现新数据的模型
 class RestoreNewModels():
+
     def __init__(self, modelIndex):
         self.path = "../data/newGod/{}/".format(modelIndex)
 
@@ -24,8 +26,10 @@ class RestoreNewModels():
         # predict = np.average(mergeArray, axis=0, weights=weight)
         return predict
 
+
 #复原旧数据的模型
 class RestoreOldModels():
+
     def __init__(self, modelIndex):
         self.path = "../data/oldGod/{}/".format(modelIndex)
 
@@ -40,15 +44,18 @@ class RestoreOldModels():
             predict = np.reshape(predict, [1, 1493])
             mergeArray = np.vstack((mergeArray, predict))
         predict = np.mean(mergeArray, axis=0)
-        temp = pd.DataFrame({"TICKER_SYMBOL":pd.read_pickle(self.path + "id_test.p"),
-                      "predict":predict})
+        temp = pd.DataFrame(
+            {"TICKER_SYMBOL": pd.read_pickle(self.path + "id_test.p"),
+             "predict": predict})
         return temp.sort_values(by=["TICKER_SYMBOL"])["predict"].values
+
 
 #复原时序模型
 class RestoreTimeSeries():
     def __init__(self):
 
-        self.trainData = pd.read_excel("../data/timeSeries/timeSeriesData.xlsx", index_col="TICKER_SYMBOL")
+        self.trainData = pd.read_excel(
+            "../data/timeSeries/timeSeriesData.xlsx", index_col="TICKER_SYMBOL")
 
     def timeModel(self, flag):
         predictList = []
@@ -97,6 +104,3 @@ class RestoreTimeSeries():
                 result = np.nan
             predictList.append(result)
         return predictList
-
-
-
