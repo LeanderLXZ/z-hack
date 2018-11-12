@@ -1,16 +1,16 @@
 import numpy as np
-import pandas as pd
 from rpy2 import robjects as ro
 
 
 class RModelBase(object):
 
-    def __init__(self, data_series, forest_num=1, frequency=5):
+    def __init__(self, data_series, params):
         ro.r('library(forecast)')
 
         self.data_series = data_series
-        self.forest_num = forest_num
-        self.frequency = frequency
+        self.forest_num = params['forest_num']
+        self.frequency = params['frequency']
+        self.params = params
 
     def data_process(self):
         data_series = ro.IntVector(self.data_series)
@@ -66,7 +66,7 @@ class HoltWinters(RModelBase):
         try:
             model = ro.r.hw(data)
             result = ro.r.predict(
-                model, h=self.forest_num, seasonal='multiplicative')
+                model, h=self.forest_num, seasonal=self.params['hw_seasonal'])
             result_np = np.array(result.rx(2)).reshape(-1)
             return result, result_np
         except Exception as e:
