@@ -4,13 +4,12 @@ from rpy2 import robjects as ro
 
 class RModelBase(object):
 
-    def __init__(self, data_series, params):
+    def __init__(self, data_series, freq, forest_num):
         ro.r('library(forecast)')
 
         self.data_series = data_series
-        self.forest_num = params['forest_num']
-        self.frequency = params['frequency']
-        self.params = params
+        self.frequency = freq
+        self.forest_num = forest_num
 
     def data_process(self):
         data_series = ro.IntVector(self.data_series)
@@ -28,8 +27,8 @@ class Arima(RModelBase):
             result_np = np.array(result.rx(4)).reshape(-1)
             return result, result_np
         except Exception as e:
-            print("Error:", e)
-            return np.nan
+            print('[Error in Arima] ', e)
+            return None, np.zeros(self.forest_num)
 
 
 class STL(RModelBase):
@@ -41,8 +40,8 @@ class STL(RModelBase):
             result_np = np.array(result.rx(2)).reshape(-1)
             return result, result_np
         except Exception as e:
-            print("Error:", e)
-            return np.nan
+            print('[Error in STL] ', e)
+            return None, np.zeros(self.forest_num)
 
 
 class ETS(RModelBase):
@@ -55,20 +54,20 @@ class ETS(RModelBase):
             result_np = np.array(result.rx(2)).reshape(-1)
             return result, result_np
         except Exception as e:
-            print("Error:", e)
-            return np.nan
+            print('[Error in ETS] ', e)
+            return None, np.zeros(self.forest_num)
 
 
 class HoltWinters(RModelBase):
 
-    def predict(self):
+    def predict(self, seasonal='multiplicative'):
         data = self.data_process()
         try:
             model = ro.r.hw(data)
             result = ro.r.predict(
-                model, h=self.forest_num, seasonal=self.params['hw_seasonal'])
+                model, h=self.forest_num, seasonal=seasonal)
             result_np = np.array(result.rx(2)).reshape(-1)
             return result, result_np
         except Exception as e:
-            print("Error:", e)
-            return np.nan
+            print('[Error in HoltWinters] ', e)
+            return None, np.zeros(self.forest_num)

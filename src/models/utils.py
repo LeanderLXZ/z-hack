@@ -1168,57 +1168,64 @@ def get_cv_args(cv_args, append_info):
 
 # Get Simple Parameter's Name
 def get_simple_param_name(param_name):
-    param_name_convert_dict = {'num_boost_round': 'nbr',
-                               'learning_rate': 'lr',
-                               'gamma': 'gma',
-                               'max_depth': 'mdp',
-                               'min_child_weight': 'mcw',
-                               'subsample': 'sbs',
-                               'colsample_bytree': 'cst',
-                               'colsample_bylevel': 'csl',
-                               'lambda': 'lmd',
-                               'alpha': 'aph',
-                               'early_stopping_rounds': 'esr',
-                               'objective': 'obj',
-                               'seed': 's',
-                               'num_leaves': 'nl',
-                               'min_data_in_leaf': 'mdl',
-                               'min_sum_hessian_in_leaf': 'msh',
-                               'feature_fraction': 'ff',
-                               'feature_fraction_seed': 'ffs',
-                               'bagging_fraction': 'bf',
-                               'bagging_freq': 'bfq',
-                               'bagging_seed': 'bs',
-                               'lambda_l1': 'll1',
-                               'lambda_l2': 'll2',
-                               'min_gain_to_split': 'mgs',
-                               'max_bin': 'mb',
-                               'min_data_in_bin': 'mdb',
-                               'iterations': 'itr',
-                               'depth': 'dpt',
-                               'l2_leaf_reg': 'l2r',
-                               'bagging_temperature': 'btp',
-                               'border': 'bdr',
-                               'border_count': 'bct',
-                               'od_pval': 'odp',
-                               'od_wait': 'odw',
-                               'od_type': 'odt',
-                               'gradient_iterations': 'gitr',
-                               'random_seed': 's',
-                               'ctr_description': 'ctrd',
-                               'ctr_border_count': 'ctrb',
-                               'ctr_leaf_count_limit': 'ctrl',
-                               'ignored_features': 'igf',
-                               'epochs': 'epo',
-                               'unit_number': 'unn',
-                               'keep_probability': 'kpp',
-                               'batch_size': 'bs',
-                               'n_valid': 'va',
-                               'n_cv': 'cv',
-                               'n_era': 'er',
-                               'valid_rate': 'vr',
-                               'window_size': 'ws',
-                               'cv_weights': 'cw'}
+    param_name_convert_dict = {
+        'num_boost_round': 'nbr',
+        'learning_rate': 'lr',
+        'gamma': 'gma',
+        'max_depth': 'mdp',
+        'min_child_weight': 'mcw',
+        'subsample': 'sbs',
+        'colsample_bytree': 'cst',
+        'colsample_bylevel': 'csl',
+        'lambda': 'lmd',
+        'alpha': 'aph',
+        'early_stopping_rounds': 'esr',
+        'objective': 'obj',
+        'seed': 's',
+        'num_leaves': 'nl',
+        'min_data_in_leaf': 'mdl',
+        'min_sum_hessian_in_leaf': 'msh',
+        'feature_fraction': 'ff',
+        'feature_fraction_seed': 'ffs',
+        'bagging_fraction': 'bf',
+        'bagging_freq': 'bfq',
+        'bagging_seed': 'bs',
+        'lambda_l1': 'll1',
+        'lambda_l2': 'll2',
+        'min_gain_to_split': 'mgs',
+        'max_bin': 'mb',
+        'min_data_in_bin': 'mdb',
+        'iterations': 'itr',
+        'depth': 'dpt',
+        'l2_leaf_reg': 'l2r',
+        'bagging_temperature': 'btp',
+        'border': 'bdr',
+        'border_count': 'bct',
+        'od_pval': 'odp',
+        'od_wait': 'odw',
+        'od_type': 'odt',
+        'gradient_iterations': 'gitr',
+        'random_seed': 's',
+        'ctr_description': 'ctrd',
+        'ctr_border_count': 'ctrb',
+        'ctr_leaf_count_limit': 'ctrl',
+        'ignored_features': 'igf',
+        'epochs': 'epo',
+        'unit_number': 'unn',
+        'keep_probability': 'kpp',
+        'batch_size': 'bs',
+        'n_valid': 'va',
+        'n_cv': 'cv',
+        'n_era': 'er',
+        'valid_rate': 'vr',
+        'window_size': 'ws',
+        'cv_weights': 'cw',
+        'model_name': 'mdl',
+        'start_year': 'st',
+        'valid_range': 'va',
+        'frequency': 'fq',
+        'hw_seasonal': 'hws'
+    }
 
     if param_name in param_name_convert_dict.keys():
         return param_name_convert_dict[param_name]
@@ -1246,3 +1253,28 @@ def get_suffix(sample_mode):
         raise ValueError('Wrong Mode!')
 
     return suffix
+
+
+# Save Log to csv File
+def save_ts_log_to_csv(log_path, grid_search_tuple_dict,
+                       cost, idx, append_info=''):
+    check_dir([log_path])
+    model_name = grid_search_tuple_dict['model_name']
+    start_year = grid_search_tuple_dict['start_year']
+    valid_range = grid_search_tuple_dict['valid_range']
+    frequency = grid_search_tuple_dict['frequency']
+    hw_seasonal = grid_search_tuple_dict['hw_seasonal']
+    file_path = os.path.join(log_path, 'cost_log{}.csv'.format(append_info))
+
+    if not os.path.isfile(file_path):
+        with open(file_path, 'w') as f:
+            header = ['idx', 'model_name', 'start_year',
+                      'valid_range', 'frequency', 'hw_seasonal', 'cost']
+            writer = csv.writer(f)
+            writer.writerow(header)
+
+    with open(file_path, 'a') as f:
+        log = [idx, model_name, start_year,
+               valid_range, frequency, hw_seasonal, cost]
+        writer = csv.writer(f)
+        writer.writerow(log)

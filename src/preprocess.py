@@ -4,9 +4,6 @@ from models import utils
 from os.path import join
 from config import cfg
 
-source_path = '../data/source_data'
-preprocessed_path = '../data/preprocessed_data'
-
 
 # Load CSV Files Using Pandas
 def load_csv(file_path):
@@ -58,7 +55,7 @@ if __name__ == '__main__':
     utils.thick_line()
     print('Start preprocessing...')
 
-    utils.check_dir([preprocessed_path])
+    utils.check_dir([cfg.preprocessed_path])
 
     df_day = []
     df_month = []
@@ -67,7 +64,7 @@ if __name__ == '__main__':
     for year in ['2009', '2010', '2011', '2012', '2013']:
         print('Preprocessing data in {}...'.format(year))
         df_loaded = load_csv(
-            join(source_path, 'z_hack_transaction_{}_new.csv'.format(year)))
+            join(cfg.source_path, 'z_hack_transaction_{}_new.csv'.format(year)))
         df_day.append(preprocess(df_loaded, 'day'))
         df_month.append(preprocess(df_loaded, 'month'))
         df_year.append(preprocess(df_loaded, 'year'))
