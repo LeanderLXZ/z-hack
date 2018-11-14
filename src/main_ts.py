@@ -124,4 +124,4 @@ if __name__ == '__main__':
         'hw', freq=10, forest_num=21, seasonal='multiplicative',
         data_range=range_1, save_result=True)
 
-    df.to_csv(join(cfg.result_path, 'result_day.csv'))
+    df.to_csv(join(cfg.log_path, 'result_day.csv'))
