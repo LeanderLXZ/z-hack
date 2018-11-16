@@ -16,11 +16,15 @@ class Training(object):
 
         file_path = cfg.preprocessed_path
         if fill_mode:
+            print('Loading {}...'.format(
+                join(file_path, 'total_day_{}.csv'.format(fill_mode))))
             self.data = pd.read_csv(
-                join(file_path, 'total_work_day_{}.csv'.format(fill_mode)),
+                join(file_path, 'total_day_{}.csv'.format(fill_mode)),
                 index_col='DATE',
                 parse_dates=['DATE'],)
         else:
+            print('Loading {}...'.format(
+                join(file_path, 'total_{}.csv'.format(sample_mode))))
             self.data = pd.read_csv(
                 join(file_path, 'total_{}.csv'.format(sample_mode)),
                 index_col='DATE',

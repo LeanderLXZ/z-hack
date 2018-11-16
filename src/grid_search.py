@@ -13,11 +13,14 @@ class GridSearch(object):
     def __init__(self, sample_mode, select_col):
 
         self.T = {'no': Training(sample_mode, select_col),
-                  'mff': Training(sample_mode, select_col, 'mff'),
-                  'mbf': Training(sample_mode, select_col, 'mbf'),
-                  'aff': Training(sample_mode, select_col, 'aff'),
-                  'abf': Training(sample_mode, select_col, 'abf')}
-
+                  'w_ff': Training(sample_mode, select_col, 'w_ff'),
+                  'w_bf': Training(sample_mode, select_col, 'w_bf'),
+                  'w_avg': Training(sample_mode, select_col, 'w_avg'),
+                  'w_line': Training(sample_mode, select_col, 'w_line'),
+                  'a_ff': Training(sample_mode, select_col, 'a_ff'),
+                  'a_bf': Training(sample_mode, select_col, 'a_bf'),
+                  'a_avg': Training(sample_mode, select_col, 'a_avg'),
+                  'a_line': Training(sample_mode, select_col, 'a_line')}
         self.sample_mode = sample_mode
 
     @staticmethod
@@ -162,7 +165,7 @@ class GridSearch(object):
 if __name__ == '__main__':
 
     parameter_grid = [
-        [['fill_mode', ('no', 'mff', 'mbf')],
+        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
          ['model_name', ('arima', 'stl', 'ets', 'hw')],
          ['start_year', (2009, 2010, 2011, 2012)],
          ['valid_range', [('2013-12-02', '2013-12-31'),
@@ -171,7 +174,7 @@ if __name__ == '__main__':
          ['hw_seasonal', ['multiplicative']]],
 
         # start year 2013
-        [['fill_mode', ('no', 'mff', 'mbf')],
+        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
          ['model_name', ('arima', 'stl', 'ets', 'hw')],
          ['start_year', [2013]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
@@ -179,14 +182,14 @@ if __name__ == '__main__':
          ['hw_seasonal', ['multiplicative']]],
 
         # fill_mode -- all date -- freq=7
-        [['fill_mode', ('aff', 'abf')],
+        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
          ['model_name', ('arima', 'stl', 'ets', 'hw')],
          ['start_year', (2009, 2010, 2011, 2012)],
          ['valid_range', [('2013-12-02', '2013-12-31'),
                         ('2013-01-04', '2013-01-31')]],
          ['frequency', (7, 14, 21, 28)],
          ['hw_seasonal', ['multiplicative']]],
-        [['fill_mode', ('aff', 'abf')],
+        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
          ['model_name', ('arima', 'stl', 'ets', 'hw')],
          ['start_year', [2013]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
@@ -194,27 +197,27 @@ if __name__ == '__main__':
          ['hw_seasonal', ['multiplicative']]],
 
         # Holt-Winters -- additive
-        [['fill_mode', ('no', 'mff', 'mbf')],
+        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
          ['model_name', ['hw']],
          ['start_year', (2009, 2010, 2011, 2012)],
          ['valid_range', [('2013-12-02', '2013-12-31'),
                           ('2013-01-04', '2013-01-31')]],
          ['frequency', (5, 10, 15, 20, 25, 30)],
          ['hw_seasonal', ['additive']]],
-        [['fill_mode', ['no', 'mff', 'mbf']],
+        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
          ['model_name', ['hw']],
          ['start_year', [2013]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
          ['frequency', (5, 10, 15, 20, 25, 30)],
          ['hw_seasonal', ['additive']]],
-        [['fill_mode', ('aff', 'abf')],
+        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
          ['model_name', ['hw']],
          ['start_year', (2009, 2010, 2011, 2012)],
          ['valid_range', [('2013-12-02', '2013-12-31'),
                           ('2013-01-04', '2013-01-31')]],
          ['frequency', (7, 14, 21, 28)],
          ['hw_seasonal', ['additive']]],
-        [['fill_mode', ('aff', 'abf')],
+        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
          ['model_name', ['hw']],
          ['start_year', [2013]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
