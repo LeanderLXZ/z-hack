@@ -1224,7 +1224,8 @@ def get_simple_param_name(param_name):
         'start_year': 'st',
         'valid_range': 'va',
         'frequency': 'fq',
-        'hw_seasonal': 'hws'
+        'hw_seasonal': 'hws',
+        'fill_mode': 'fm'
     }
 
     if param_name in param_name_convert_dict.keys():
@@ -1264,17 +1265,18 @@ def save_ts_log_to_csv(log_path, grid_search_tuple_dict,
     valid_range = grid_search_tuple_dict['valid_range']
     frequency = grid_search_tuple_dict['frequency']
     hw_seasonal = grid_search_tuple_dict['hw_seasonal']
+    fill_mode = grid_search_tuple_dict['fill_mode']
     file_path = os.path.join(log_path, 'cost_log{}.csv'.format(append_info))
 
     if not os.path.isfile(file_path):
         with open(file_path, 'w') as f:
-            header = ['idx', 'model_name', 'start_year',
-                      'valid_range', 'frequency', 'hw_seasonal', 'cost']
+            header = ['idx', 'model_name', 'start_year', 'valid_range',
+                      'frequency', 'hw_seasonal', 'fill_mode', 'cost']
             writer = csv.writer(f)
             writer.writerow(header)
 
     with open(file_path, 'a') as f:
-        log = [idx, model_name, start_year,
-               valid_range, frequency, hw_seasonal, cost]
+        log = [idx, model_name, start_year, valid_range,
+               frequency, hw_seasonal, fill_mode, cost]
         writer = csv.writer(f)
         writer.writerow(log)
