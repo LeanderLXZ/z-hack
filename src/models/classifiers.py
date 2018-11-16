@@ -57,12 +57,12 @@ class ModelBase(object):
                 raise ValueError("Groups not found! 'use_multi_group' should be False!")
 
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('This Is Base Model!')
-        clf = DecisionTreeClassifier()
+        reg = DecisionTreeClassifier()
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -79,12 +79,12 @@ class ModelBase(object):
     def fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None):
 
         # Get Classifier
-        clf = self.get_clf(parameters)
+        reg = self.get_reg(parameters)
 
         # Training Model
-        clf.fit(x_train, y_train, sample_weight=w_train)
+        reg.fit(x_train, y_train, sample_weight=w_train)
 
-        return clf
+        return reg
 
     def get_pattern(self):
         return None
@@ -92,15 +92,15 @@ class ModelBase(object):
     def prejudge_fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None, use_weight=True):
 
         # Get Classifier
-        clf = self.get_clf(parameters)
+        reg = self.get_reg(parameters)
 
         # Training Model
         if use_weight:
-            clf.fit(x_train, y_train, sample_weight=w_train)
+            reg.fit(x_train, y_train, sample_weight=w_train)
         else:
-            clf.fit(x_train, y_train)
+            reg.fit(x_train, y_train)
 
-        return clf
+        return reg
 
     def fit_with_round_log(self, boost_round_log_path, cv_count, x_train, y_train,
                            w_train, x_valid, y_valid, w_valid, parameters,
@@ -120,7 +120,7 @@ class ModelBase(object):
         with open(boost_round_log_path, 'a') as f:
             __console__ = sys.stdout
             sys.stdout = f
-            clf = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
+            reg = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
             sys.stdout = __console__
 
         with open(boost_round_log_path) as f:
@@ -139,9 +139,9 @@ class ModelBase(object):
                         global_valid_loss_round_cv.append(float(pattern.match(line).group(4)))
 
         if self.use_global_valid:
-            return clf, idx_round_cv, train_loss_round_cv, valid_loss_round_cv, global_valid_loss_round_cv
+            return reg, idx_round_cv, train_loss_round_cv, valid_loss_round_cv, global_valid_loss_round_cv
         else:
-            return clf, idx_round_cv, train_loss_round_cv, valid_loss_round_cv
+            return reg, idx_round_cv, train_loss_round_cv, valid_loss_round_cv
 
     def save_boost_round_log(self, boost_round_log_path, idx_round, train_loss_round_mean,
                              valid_loss_round_mean, train_seed, cv_seed, csv_idx, parameters,
@@ -180,12 +180,12 @@ class ModelBase(object):
                 boost_round_log_path, idx_round, train_loss_round_mean,
                 valid_loss_round_mean, profit=profit)
 
-    def get_importance(self, clf):
+    def get_importance(self, reg):
 
         print('------------------------------------------------------')
         print('Feature Importance')
 
-        self.importance = clf.feature_importances_
+        self.importance = reg.feature_importances_
         self.indices = np.argsort(self.importance)[::-1]
 
         feature_num = len(self.importance)
@@ -194,29 +194,29 @@ class ModelBase(object):
             print("%d | feature %d | %d" % (
                 f + 1, self.indices[f], self.importance[self.indices[f]]))
 
-    def predict(self, clf, x_test, pred_path=None):
+    def predict(self, reg, x_test, pred_path=None):
 
         print('------------------------------------------------------')
-        print('Predicting Test Probability...')
+        print('Predicting Test Result...')
 
-        prob_test = np.array(clf.predict_proba(x_test))[:, 1]
+        pred_test = np.array(reg.predict(x_test))[:, 1]
 
         if pred_path is not None:
-            utils.save_pred_to_csv(pred_path, self.id_test, prob_test)
+            utils.save_pred_to_csv(pred_path, self.id_test, pred_test)
 
-        return prob_test
+        return pred_test
 
-    def get_prob_train(self, clf, x_train, pred_path=None):
+    def get_pred_train(self, reg, x_train, pred_path=None):
 
         print('------------------------------------------------------')
         print('Predicting Train Probability...')
 
-        prob_train = np.array(clf.predict_proba(x_train))[:, 1]
+        pred_train = np.array(reg.predict(x_train))[:, 1]
 
         if pred_path is not None:
-            utils.save_prob_train_to_csv(pred_path, prob_train, self.y_train)
+            utils.save_pred_train_to_csv(pred_path, pred_train, self.y_train)
 
-        return prob_train
+        return pred_train
 
     def save_csv_log(self, mode, csv_log_path, param_name_list, param_value_list, csv_idx,
                      loss_train_w_mean, loss_valid_w_mean, acc_train, train_seed, cv_seed,
@@ -308,7 +308,7 @@ class ModelBase(object):
                                                  loss_valid_w_mean, acc_train, train_seed,
                                                  cv_seed, n_valid, n_cv, parameters, profit=profit)
 
-    def save_final_pred(self, mode, prob_test_mean, pred_path, parameters, csv_idx,
+    def save_final_pred(self, mode, pred_test_mean, pred_path, parameters, csv_idx,
                         train_seed, cv_seed, boost_round_log_path=None, param_name_list=None,
                         param_value_list=None, file_name_params=None, append_info=''):
 
@@ -331,7 +331,7 @@ class ModelBase(object):
             utils.check_dir([pred_path])
             pred_path += self.model_name + '_' + str(csv_idx) + \
                 '_t-' + str(train_seed) + '_c-' + str(cv_seed) + '_'
-            utils.save_pred_to_csv(pred_path, self.id_test, prob_test_mean)
+            utils.save_pred_to_csv(pred_path, self.id_test, pred_test_mean)
 
         elif mode == 'auto_train_boost_round':
 
@@ -342,7 +342,7 @@ class ModelBase(object):
             utils.check_dir([pred_path])
             pred_path += self.model_name + '_' + str(csv_idx) + \
                 '_t-' + str(train_seed) + '_c-' + str(cv_seed) + '_'
-            utils.save_pred_to_csv(pred_path, self.id_test, prob_test_mean)
+            utils.save_pred_to_csv(pred_path, self.id_test, pred_test_mean)
 
         else:
             pred_path += 'final_results/'
@@ -350,7 +350,7 @@ class ModelBase(object):
             pred_path += self.model_name + '_' + append_info + '/'
             utils.check_dir([pred_path])
             pred_path += self.model_name + '_t-' + str(train_seed) + '_c-' + str(cv_seed) + params
-            utils.save_pred_to_csv(pred_path, self.id_test, prob_test_mean)
+            utils.save_pred_to_csv(pred_path, self.id_test, pred_test_mean)
 
     @staticmethod
     def get_postscale_rate(y):
@@ -404,29 +404,29 @@ class ModelBase(object):
 
     def lgb_postscale_feval(self, preds, train_data):
 
-        prob = copy.deepcopy(preds)
+        pred = copy.deepcopy(preds)
         labels = train_data.get_label()
         weights = train_data.get_weight()
-        prob *= self.postscale_rate
-        loss = utils.log_loss_with_weight(prob, labels, weights)
+        pred *= self.postscale_rate
+        loss = utils.log_loss_with_weight(pred, labels, weights)
 
         return 'binary_logloss', loss, False
 
     def xgb_postscale_feval(self, preds, train_data):
 
-        prob = copy.deepcopy(preds)
+        pred = copy.deepcopy(preds)
         labels = train_data.get_label()
         weights = train_data.get_weight()
-        prob *= self.postscale_rate
-        loss = utils.log_loss_with_weight(prob, labels, weights)
+        pred *= self.postscale_rate
+        loss = utils.log_loss_with_weight(pred, labels, weights)
 
         return 'logloss', loss
 
     def train(self, pred_path=None, loss_log_path=None, csv_log_path=None, boost_round_log_path=None,
               train_seed=None, cv_args=None, parameters=None, show_importance=False, show_accuracy=False,
-              save_cv_pred=True, save_cv_prob_train=False, save_final_pred=True, save_final_prob_train=False,
+              save_cv_pred=True, save_cv_pred_train=False, save_final_pred=True, save_final_pred_train=False,
               save_csv_log=True, csv_idx=None, prescale=False, postscale=False, use_global_valid=False,
-              return_prob_test=False, mode=None, param_name_list=None, param_value_list=None,
+              return_pred_test=False, mode=None, param_name_list=None, param_value_list=None,
               use_custom_obj=False, use_scale_pos_weight=False, file_name_params=None, append_info=None):
 
         # Check if directories exit or not
@@ -453,8 +453,8 @@ class ModelBase(object):
             print('[W] Using Global Validation...')
 
         cv_count = 0
-        prob_test_total = []
-        prob_train_total = []
+        pred_test_total = []
+        pred_train_total = []
         loss_train_total = []
         loss_valid_total = []
         loss_train_w_total = []
@@ -463,7 +463,7 @@ class ModelBase(object):
         train_loss_round_total = []
         valid_loss_round_total = []
         global_valid_loss_round_total = []
-        prob_global_valid_total = []
+        pred_global_valid_total = []
         loss_global_valid_total = []
         loss_global_valid_w_total = []
 
@@ -534,14 +534,14 @@ class ModelBase(object):
             # Fitting and Training Model
             if mode == 'auto_train_boost_round':
                 if use_global_valid:
-                    clf, idx_round_cv, train_loss_round_cv, \
+                    reg, idx_round_cv, train_loss_round_cv, \
                         valid_loss_round_cv, global_valid_loss_round_cv = \
                         self.fit_with_round_log(
                             boost_round_log_path, cv_count, x_train, y_train, w_train, x_valid, y_valid,
                             w_valid, parameters, param_name_list, param_value_list, append_info=append_info)
                     global_valid_loss_round_total.append(global_valid_loss_round_cv)
                 else:
-                    clf, idx_round_cv, train_loss_round_cv, valid_loss_round_cv = \
+                    reg, idx_round_cv, train_loss_round_cv, valid_loss_round_cv = \
                         self.fit_with_round_log(
                             boost_round_log_path, cv_count, x_train, y_train, w_train, x_valid, y_valid,
                             w_valid, parameters, param_name_list, param_value_list, append_info=append_info)
@@ -550,11 +550,11 @@ class ModelBase(object):
                 train_loss_round_total.append(train_loss_round_cv)
                 valid_loss_round_total.append(valid_loss_round_cv)
             else:
-                clf = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
+                reg = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
 
             # Feature Importance
             if show_importance:
-                self.get_importance(clf)
+                self.get_importance(reg)
 
             # Prediction
             if save_cv_pred:
@@ -562,54 +562,54 @@ class ModelBase(object):
                     pred_path + 'cv_results/' + self.model_name + '_cv_{}_'.format(cv_count)
             else:
                 cv_pred_path = None
-            prob_test = self.predict(clf, self.x_test, pred_path=cv_pred_path)
+            pred_test = self.predict(reg, self.x_test, pred_path=cv_pred_path)
 
             # Save Train Probabilities to CSV File
-            if save_cv_prob_train:
-                cv_prob_train_path = \
-                    pred_path + 'cv_prob_train/' + self.model_name + '_cv_{}_'.format(cv_count)
+            if save_cv_pred_train:
+                cv_pred_train_path = \
+                    pred_path + 'cv_pred_train/' + self.model_name + '_cv_{}_'.format(cv_count)
             else:
-                cv_prob_train_path = None
-            prob_train = self.get_prob_train(clf, x_train, pred_path=cv_prob_train_path)
-            prob_train_all = self.get_prob_train(clf, self.x_train, pred_path=cv_prob_train_path)
+                cv_pred_train_path = None
+            pred_train = self.get_pred_train(reg, x_train, pred_path=cv_pred_train_path)
+            pred_train_all = self.get_pred_train(reg, self.x_train, pred_path=cv_pred_train_path)
 
             # Predict Global Validation Set
             if use_global_valid:
-                prob_global_valid = self.predict(clf, self.x_global_valid)
+                pred_global_valid = self.predict(reg, self.x_global_valid)
             else:
-                prob_global_valid = np.array([])
+                pred_global_valid = np.array([])
 
             # Get Probabilities of Validation Set
-            prob_valid = self.predict(clf, x_valid)
+            pred_valid = self.predict(reg, x_valid)
 
             # postscale
             if postscale:
                 print('------------------------------------------------------')
                 print('[W] PostScaling Results...')
                 print('PostScale Rate: {:.6f}'.format(postscale_rate))
-                prob_test *= postscale_rate
-                prob_train *= postscale_rate
-                prob_valid *= postscale_rate
+                pred_test *= postscale_rate
+                pred_train *= postscale_rate
+                pred_valid *= postscale_rate
                 if use_global_valid:
-                    prob_global_valid *= postscale_rate
+                    pred_global_valid *= postscale_rate
 
             # Print LogLoss
             print('------------------------------------------------------')
             print('Validation Set Era: ', valid_era)
             loss_train, loss_valid, loss_train_w, loss_valid_w = \
-                utils.print_loss(prob_train, y_train, w_train, prob_valid, y_valid, w_valid)
+                utils.print_loss(pred_train, y_train, w_train, pred_valid, y_valid, w_valid)
 
             # Print and Get Accuracies of CV
             acc_train_cv, acc_valid_cv, acc_train_cv_era, acc_valid_cv_era = \
-                utils.print_and_get_accuracy(prob_train, y_train, e_train,
-                                             prob_valid, y_valid, e_valid, show_accuracy)
+                utils.print_and_get_accuracy(pred_train, y_train, e_train,
+                                             pred_valid, y_valid, e_valid, show_accuracy)
 
             # Print Loss and Accuracy of Global Validation Set
             if use_global_valid:
                 loss_global_valid, loss_global_valid_w, acc_global_valid = \
                     utils.print_global_valid_loss_and_acc(
-                        prob_global_valid, self.y_global_valid, self.w_global_valid)
-                prob_global_valid_total.append(prob_global_valid)
+                        pred_global_valid, self.y_global_valid, self.w_global_valid)
+                pred_global_valid_total.append(pred_global_valid)
                 loss_global_valid_total.append(loss_global_valid)
                 loss_global_valid_w_total.append(loss_global_valid_w)
 
@@ -619,8 +619,8 @@ class ModelBase(object):
                 valid_era, loss_train, loss_valid, loss_train_w, loss_valid_w, train_seed,
                 cv_seed, acc_train_cv, acc_valid_cv, acc_train_cv_era, acc_valid_cv_era)
 
-            prob_test_total.append(prob_test)
-            prob_train_total.append(prob_train_all)
+            pred_test_total.append(pred_test)
+            pred_train_total.append(pred_train_all)
             loss_train_total.append(loss_train)
             loss_valid_total.append(loss_valid)
             loss_train_w_total.append(loss_train_w)
@@ -633,10 +633,10 @@ class ModelBase(object):
         print('======================================================')
         print('Calculating Final Result...')
 
-        # Calculate Means of prob and losses
-        prob_test_mean, prob_train_mean, loss_train_mean, \
+        # Calculate Means of pred and losses
+        pred_test_mean, pred_train_mean, loss_train_mean, \
             loss_valid_mean, loss_train_w_mean, loss_valid_w_mean = \
-            utils.calculate_means(prob_test_total, prob_train_total, loss_train_total, loss_valid_total,
+            utils.calculate_means(pred_test_total, pred_train_total, loss_train_total, loss_valid_total,
                                   loss_train_w_total, loss_valid_w_total, weights=cv_weights)
 
         # Save 'num_boost_round'
@@ -670,14 +670,14 @@ class ModelBase(object):
         # Save Final Result
         if save_final_pred:
             self.save_final_pred(
-                mode, prob_test_mean, pred_path, parameters, csv_idx, train_seed,
+                mode, pred_test_mean, pred_path, parameters, csv_idx, train_seed,
                 cv_seed, boost_round_log_path, param_name_list, param_value_list,
                 file_name_params=file_name_params, append_info=append_info)
 
-        # Save Final prob_train
-        if save_final_prob_train:
-            utils.save_prob_train_to_csv(pred_path + 'final_prob_train/' + self.model_name + '_',
-                                         prob_train_mean, self.y_train)
+        # Save Final pred_train
+        if save_final_pred_train:
+            utils.save_pred_train_to_csv(pred_path + 'final_pred_train/' + self.model_name + '_',
+                                         pred_train_mean, self.y_train)
 
         # Print Total Losses
         utils.print_total_loss(loss_train_mean, loss_valid_mean, loss_train_w_mean,
@@ -685,7 +685,7 @@ class ModelBase(object):
 
         # Print and Get Accuracies of CV of All Train Set
         acc_train, acc_train_era = \
-            utils.print_and_get_train_accuracy(prob_train_mean, self.y_train, self.e_train, show_accuracy)
+            utils.print_and_get_train_accuracy(pred_train_mean, self.y_train, self.e_train, show_accuracy)
 
         # Save Final Losses to File
         utils.save_final_loss_log(
@@ -696,13 +696,13 @@ class ModelBase(object):
         # Print Global Validation Information and Save
         if use_global_valid:
             # Calculate Means of Probabilities and Losses
-            prob_global_valid_mean, loss_global_valid_mean, loss_global_valid_w_mean = \
-                utils.calculate_global_valid_means(prob_global_valid_total, loss_global_valid_total,
+            pred_global_valid_mean, loss_global_valid_mean, loss_global_valid_w_mean = \
+                utils.calculate_global_valid_means(pred_global_valid_total, loss_global_valid_total,
                                                    loss_global_valid_w_total, weights=cv_weights)
             # Print Loss and Accuracy
             acc_total_global_valid = \
                 utils.print_total_global_valid_loss_and_acc(
-                    prob_global_valid_mean, self.y_global_valid,
+                    pred_global_valid_mean, self.y_global_valid,
                     loss_global_valid_mean, loss_global_valid_w_mean)
             # Save csv log
             if save_csv_log:
@@ -727,8 +727,8 @@ class ModelBase(object):
             parameters.pop('num_boost_round')
 
         # Return Final Result
-        if return_prob_test:
-            return prob_test_mean
+        if return_pred_test:
+            return pred_test_mean
 
     def stack_train(self, x_train, y_train, w_train, x_g_train, x_valid, y_valid,
                     w_valid, x_g_valid, x_test, x_g_test, parameters, show_importance=False):
@@ -743,24 +743,24 @@ class ModelBase(object):
         print('------------------------------------------------------')
 
         # Fitting and Training Model
-        clf = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
+        reg = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
 
         # Feature Importance
         if show_importance:
-            self.get_importance(clf)
+            self.get_importance(reg)
 
         # Prediction
-        prob_train = self.predict(clf, x_train)
-        prob_valid = self.predict(clf, x_valid)
-        prob_test = self.predict(clf, x_test)
+        pred_train = self.predict(reg, x_train)
+        pred_valid = self.predict(reg, x_valid)
+        pred_test = self.predict(reg, x_test)
 
         # Print LogLoss
         loss_train, loss_valid, loss_train_w, loss_valid_w = \
-            utils.print_loss(prob_train, y_train, w_train, prob_valid, y_valid, w_valid)
+            utils.print_loss(pred_train, y_train, w_train, pred_valid, y_valid, w_valid)
 
         losses = [loss_train, loss_valid, loss_train_w, loss_valid_w]
 
-        return prob_valid, prob_test, losses
+        return pred_valid, pred_test, losses
 
     def prejudge_train_binary(self, pred_path=None, n_splits=10, n_cv=10, cv_seed=None, use_weight=True,
                               parameters=None, show_importance=False, show_accuracy=False, cv_generator=None):
@@ -770,8 +770,8 @@ class ModelBase(object):
         utils.check_dir([pred_path])
 
         count = 0
-        prob_test_total = []
-        prob_train_total = []
+        pred_test_total = []
+        pred_train_total = []
         loss_train_total = []
         loss_valid_total = []
         loss_train_w_total = []
@@ -792,31 +792,31 @@ class ModelBase(object):
             print('Training on the Cross Validation Set: {}/{}'.format(count, n_cv))
 
             # Fitting and Training Model
-            clf = self.prejudge_fit(x_train, y_train, w_train, x_valid, y_valid, w_valid,
+            reg = self.prejudge_fit(x_train, y_train, w_train, x_valid, y_valid, w_valid,
                                     parameters=parameters, use_weight=use_weight)
 
             # Feature Importance
             if show_importance:
-                self.get_importance(clf)
+                self.get_importance(reg)
 
             # Prediction
-            prob_test = self.predict(clf, self.x_test, pred_path=pred_path +
+            pred_test = self.predict(reg, self.x_test, pred_path=pred_path +
                                      'cv_results/' + self.model_name + '_cv_{}_'.format(count))
 
             # Save Train Probabilities to CSV File
-            prob_train = self.get_prob_train(clf, x_train)
-            prob_train_all = self.get_prob_train(clf, self.x_train)
+            pred_train = self.get_pred_train(reg, x_train)
+            pred_train_all = self.get_pred_train(reg, self.x_train)
 
             # Prediction
-            prob_valid = self.predict(clf, x_valid)
+            pred_valid = self.predict(reg, x_valid)
 
             # Print LogLoss
             print('------------------------------------------------------')
             loss_train, loss_valid, loss_train_w, loss_valid_w = \
-                utils.print_loss(prob_train, self.y_train, self.w_train, prob_valid, y_valid, w_valid)
+                utils.print_loss(pred_train, self.y_train, self.w_train, pred_valid, y_valid, w_valid)
 
-            prob_test_total.append(prob_test)
-            prob_train_total.append(prob_train_all)
+            pred_test_total.append(pred_test)
+            pred_train_total.append(pred_train_all)
             loss_train_total.append(loss_train)
             loss_valid_total.append(loss_valid)
             loss_train_w_total.append(loss_train_w)
@@ -825,8 +825,8 @@ class ModelBase(object):
         print('======================================================')
         print('Calculating Final Result...')
 
-        prob_test_mean = np.mean(np.array(prob_test_total), axis=0)
-        prob_train_mean = np.mean(np.array(prob_train_total), axis=0)
+        pred_test_mean = np.mean(np.array(pred_test_total), axis=0)
+        pred_train_mean = np.mean(np.array(pred_train_total), axis=0)
         loss_train_mean = np.mean(np.array(loss_train_total), axis=0)
         loss_valid_mean = np.mean(np.array(loss_valid_total), axis=0)
         loss_train_w_mean = np.mean(np.array(loss_train_w_total), axis=0)
@@ -836,12 +836,12 @@ class ModelBase(object):
         utils.print_total_loss(loss_train_mean, loss_valid_mean, loss_train_w_mean, loss_valid_w_mean)
 
         # Print and Get Accuracies of CV of All Train Set
-        _, _ = utils.print_and_get_train_accuracy(prob_train_mean, self.y_train, self.e_train, show_accuracy)
+        _, _ = utils.print_and_get_train_accuracy(pred_train_mean, self.y_train, self.e_train, show_accuracy)
 
         # Save Final Result
-        utils.save_pred_to_csv(pred_path + 'final_results/' + self.model_name + '_', self.id_test, prob_test_mean)
+        utils.save_pred_to_csv(pred_path + 'final_results/' + self.model_name + '_', self.id_test, pred_test_mean)
 
-        return prob_test_mean
+        return pred_test_mean
 
     def prejudge_stack_train(self, x_train, x_g_train, y_train, w_train, e_train, x_valid,
                              x_g_valid, y_valid, w_valid, e_valid, x_test, x_g_test,
@@ -883,24 +883,24 @@ class ModelBase(object):
         print('------------------------------------------------------')
 
         # Fitting and Training Model
-        clf = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
+        reg = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
 
         # Feature Importance
         if show_importance:
-            self.get_importance(clf)
+            self.get_importance(reg)
 
         # Test Probabilities
-        prob_test = self.predict(clf, x_test)
+        pred_test = self.predict(reg, x_test)
 
         # Train Probabilities
-        prob_train = self.get_prob_train(clf, x_train)
+        pred_train = self.get_pred_train(reg, x_train)
 
         # Get Probabilities of Validation Set
-        prob_valid = self.predict(clf, x_valid)
+        pred_valid = self.predict(reg, x_valid)
 
         # Print LogLoss
         loss_train, loss_valid, loss_train_w, loss_valid_w = \
-            utils.print_loss(prob_train, y_train, w_train, prob_valid, y_valid, w_valid)
+            utils.print_loss(pred_train, y_train, w_train, pred_valid, y_valid, w_valid)
 
         # Save 'num_boost_round'
         if self.model_name in ['xgb', 'lgb']:
@@ -908,7 +908,7 @@ class ModelBase(object):
 
         # Save Final Result
         if save_final_pred:
-            self.save_final_pred(mode, save_final_pred, prob_test, pred_path,
+            self.save_final_pred(mode, save_final_pred, pred_test, pred_path,
                                  parameters, csv_idx, train_seed, cv_seed, file_name_params=file_name_params,
                                  append_info=append_info)
 
@@ -918,8 +918,8 @@ class ModelBase(object):
 
         # Print and Get Accuracies of CV
         acc_train, acc_valid, acc_train_era, acc_valid_era = \
-            utils.print_and_get_accuracy(prob_train, y_train, e_train,
-                                         prob_valid, y_valid, e_valid, show_accuracy)
+            utils.print_and_get_accuracy(pred_train, y_train, e_train,
+                                         pred_valid, y_valid, e_valid, show_accuracy)
 
         # Save Final Losses to File
         utils.save_final_loss_log(loss_log_path + self.model_name + '_', parameters, n_valid, n_cv,
@@ -932,7 +932,7 @@ class ModelBase(object):
                               loss_train_w, loss_valid_w, acc_train, train_seed, cv_seed, n_valid, n_cv,
                               parameters, file_name_params=file_name_params, append_info=append_info)
 
-        return prob_valid, prob_test, losses
+        return pred_valid, pred_test, losses
 
 
 class LRegression(ModelBase):
@@ -940,12 +940,12 @@ class LRegression(ModelBase):
         Logistic Regression
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = LogisticRegression(**parameters)
+        reg = LogisticRegression(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -954,11 +954,11 @@ class LRegression(ModelBase):
 
         self.model_name = 'lr'
 
-    def get_importance(self, clf):
+    def get_importance(self, reg):
 
         print('------------------------------------------------------')
         print('Feature Importance')
-        self.importance = np.abs(clf.coef_)[0]
+        self.importance = np.abs(reg.coef_)[0]
         indices = np.argsort(self.importance)[::-1]
 
         feature_num = self.x_train.shape[1]
@@ -972,12 +972,12 @@ class KNearestNeighbor(ModelBase):
         k-Nearest Neighbor Classifier
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = KNeighborsClassifier(**parameters)
+        reg = KNeighborsClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -992,12 +992,12 @@ class SupportVectorClustering(ModelBase):
         SVM - Support Vector Clustering
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = SVC(**parameters)
+        reg = SVC(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1012,12 +1012,12 @@ class Gaussian(ModelBase):
         Gaussian NB
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = GaussianNB(**parameters)
+        reg = GaussianNB(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1032,12 +1032,12 @@ class DecisionTree(ModelBase):
         Decision Tree
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = DecisionTreeClassifier(**parameters)
+        reg = DecisionTreeClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1052,12 +1052,12 @@ class RandomForest(ModelBase):
         Random Forest
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = RandomForestClassifier(**parameters)
+        reg = RandomForestClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1072,12 +1072,12 @@ class ExtraTrees(ModelBase):
         Extra Trees
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = ExtraTreesClassifier(**parameters)
+        reg = ExtraTreesClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1092,12 +1092,12 @@ class AdaBoost(ModelBase):
         AdaBoost
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = AdaBoostClassifier(**parameters)
+        reg = AdaBoostClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1112,12 +1112,12 @@ class GradientBoosting(ModelBase):
         Gradient Boosting
     """
     @staticmethod
-    def get_clf(parameters):
+    def get_reg(parameters):
 
         print('Initialize Model...')
-        clf = GradientBoostingClassifier(**parameters)
+        reg = GradientBoostingClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1231,24 +1231,24 @@ class XGBoost(ModelBase):
         print('------------------------------------------------------')
         print('Predicting Test Probability...')
 
-        prob_test = model.predict(xgb.DMatrix(x_test))
+        pred_test = model.predict(xgb.DMatrix(x_test))
 
         if pred_path is not None:
-            utils.save_pred_to_csv(pred_path, self.id_test, prob_test)
+            utils.save_pred_to_csv(pred_path, self.id_test, pred_test)
 
-        return prob_test
+        return pred_test
 
-    def get_prob_train(self, model, x_train, pred_path=None):
+    def get_pred_train(self, model, x_train, pred_path=None):
 
         print('------------------------------------------------------')
         print('Predicting Train Probability...')
 
-        prob_train = model.predict(xgb.DMatrix(x_train))
+        pred_train = model.predict(xgb.DMatrix(x_train))
 
         if pred_path is not None:
-            utils.save_prob_train_to_csv(pred_path, prob_train, self.y_train)
+            utils.save_pred_train_to_csv(pred_path, pred_train, self.y_train)
 
-        return prob_train
+        return pred_train
 
 
 class SKLearnXGBoost(ModelBase):
@@ -1256,12 +1256,12 @@ class SKLearnXGBoost(ModelBase):
         XGBoost using sklearn module
     """
     @staticmethod
-    def get_clf(parameters=None):
+    def get_reg(parameters=None):
 
         print('Initialize Model...')
-        clf = XGBClassifier(**parameters)
+        reg = XGBClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1273,21 +1273,21 @@ class SKLearnXGBoost(ModelBase):
     def fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None):
 
         # Get Classifier
-        clf = self.get_clf(parameters)
+        reg = self.get_reg(parameters)
 
         # Training Model
-        clf.fit(x_train, y_train, sample_weight=w_train,
+        reg.fit(x_train, y_train, sample_weight=w_train,
                 eval_set=[(x_train, y_train), (x_valid, y_valid)],
                 early_stopping_rounds=100, eval_metric='logloss', verbose=True)
 
-        return clf
+        return reg
 
-    def get_importance(self, clf):
+    def get_importance(self, reg):
 
         print('------------------------------------------------------')
         print('Feature Importance')
 
-        self.importance = clf.feature_importances_
+        self.importance = reg.feature_importances_
         self.indices = np.argsort(self.importance)[::-1]
 
         feature_num = len(self.importance)
@@ -1410,24 +1410,24 @@ class LightGBM(ModelBase):
         print('------------------------------------------------------')
         print('Predicting Test Probability...')
 
-        prob_test = bst.predict(x_test)
+        pred_test = bst.predict(x_test)
 
         if pred_path is not None:
-            utils.save_pred_to_csv(pred_path, self.id_test, prob_test)
+            utils.save_pred_to_csv(pred_path, self.id_test, pred_test)
 
-        return prob_test
+        return pred_test
 
-    def get_prob_train(self, bst, x_train, pred_path=None):
+    def get_pred_train(self, bst, x_train, pred_path=None):
 
         print('------------------------------------------------------')
         print('Predicting Train Probability...')
 
-        prob_train = bst.predict(x_train)
+        pred_train = bst.predict(x_train)
 
         if pred_path is not None:
-            utils.save_prob_train_to_csv(pred_path, prob_train, self.y_train)
+            utils.save_pred_train_to_csv(pred_path, pred_train, self.y_train)
 
-        return prob_train
+        return pred_train
 
     def prejudge_train_multiclass(self, pred_path=None, n_splits=10, n_cv=10, n_era=20, cv_seed=None,
                                   use_weight=True, parameters=None, show_importance=False, cv_generator=None):
@@ -1436,7 +1436,7 @@ class LightGBM(ModelBase):
         utils.check_dir_model(pred_path)
 
         cv_counter = 0
-        prob_test_total = np.array([])
+        pred_test_total = np.array([])
 
         # Get Cross Validation Generator
         if cv_generator is None:
@@ -1473,19 +1473,19 @@ class LightGBM(ModelBase):
                 self.get_importance(bst)
 
             # Prediction
-            prob_test = self.predict(bst, self.x_test)
+            pred_test = self.predict(bst, self.x_test)
 
             if cv_counter == 1:
-                prob_test_total = prob_test.reshape(-1, 1, n_era)
+                pred_test_total = pred_test.reshape(-1, 1, n_era)
             else:
-                np.concatenate((prob_test_total, prob_test.reshape(-1, 1, n_era)), axis=1)
+                np.concatenate((pred_test_total, pred_test.reshape(-1, 1, n_era)), axis=1)
 
         print('======================================================')
         print('Calculating Final Result...')
 
-        prob_test_mean = np.mean(prob_test_total, axis=1)
+        pred_test_mean = np.mean(pred_test_total, axis=1)
 
-        return prob_test_mean
+        return pred_test_mean
 
 
 class SKLearnLightGBM(ModelBase):
@@ -1493,12 +1493,12 @@ class SKLearnLightGBM(ModelBase):
         LightGBM using sklearn module
     """
     @staticmethod
-    def get_clf(parameters=None):
+    def get_reg(parameters=None):
 
         print('Initialize Model...')
-        clf = LGBMClassifier(**parameters)
+        reg = LGBMClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1510,18 +1510,18 @@ class SKLearnLightGBM(ModelBase):
     def fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None):
 
         # Get Classifier
-        clf = self.get_clf(parameters)
+        reg = self.get_reg(parameters)
 
         # Get Category Feature's Index
         idx_category = utils.get_idx_category(x_train, self.use_multi_group)
 
         # Fitting and Training Model
-        clf.fit(x_train, y_train, sample_weight=w_train, categorical_feature=idx_category,
+        reg.fit(x_train, y_train, sample_weight=w_train, categorical_feature=idx_category,
                 eval_set=[(x_train, y_train), (x_valid, y_valid)], eval_names=['train', 'eval'],
                 early_stopping_rounds=100, eval_sample_weight=[w_train, w_valid],
                 eval_metric='logloss', verbose=True)
 
-        return clf
+        return reg
 
 
 class CatBoost(ModelBase):
@@ -1529,11 +1529,11 @@ class CatBoost(ModelBase):
         CatBoost
     """
     @staticmethod
-    def get_clf(parameters=None):
+    def get_reg(parameters=None):
 
-        clf = CatBoostClassifier(**parameters)
+        reg = CatBoostClassifier(**parameters)
 
-        return clf
+        return reg
 
     def print_start_info(self):
 
@@ -1550,7 +1550,7 @@ class CatBoost(ModelBase):
     def fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None):
 
         # Get Classifier
-        clf = self.get_clf(parameters)
+        reg = self.get_reg(parameters)
 
         # Get Category Feature's Index
         idx_category = utils.get_idx_category(x_train, self.use_multi_group)
@@ -1559,15 +1559,15 @@ class CatBoost(ModelBase):
         w_train = [0.001 if w == 0 else w for w in w_train]
 
         # Fitting and Training Model
-        clf.fit(X=x_train, y=y_train, cat_features=idx_category, sample_weight=w_train,
+        reg.fit(X=x_train, y=y_train, cat_features=idx_category, sample_weight=w_train,
                 baseline=None, use_best_model=None, eval_set=(x_valid, y_valid), verbose=True, plot=False)
 
-        return clf
+        return reg
 
     def prejudge_fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None, use_weight=True):
 
         # Get Classifier
-        clf = self.get_clf(parameters)
+        reg = self.get_reg(parameters)
 
         # Get Category Feature's Index
         idx_category = utils.get_idx_category(x_train, self.use_multi_group)
@@ -1577,24 +1577,24 @@ class CatBoost(ModelBase):
 
         # Fitting and Training Model
         if use_weight:
-            clf.fit(X=x_train, y=y_train, cat_features=idx_category, sample_weight=w_train,
+            reg.fit(X=x_train, y=y_train, cat_features=idx_category, sample_weight=w_train,
                     baseline=None, use_best_model=None, eval_set=(x_valid, y_valid), verbose=True, plot=False)
         else:
-            clf.fit(X=x_train, y=y_train, cat_features=idx_category, baseline=None,
+            reg.fit(X=x_train, y=y_train, cat_features=idx_category, baseline=None,
                     use_best_model=None, eval_set=(x_valid, y_valid), verbose=True, plot=False)
 
-        return clf
+        return reg
 
     def get_pattern(self):
 
         return re.compile(r'(\d*):\tlearn (.*)\ttest (.*)\tbestTest')
 
-    def get_importance(self, clf):
+    def get_importance(self, reg):
 
         print('------------------------------------------------------')
         print('Feature Importance')
 
-        self.importance = clf.feature_importances_
+        self.importance = reg.feature_importances_
         self.indices = np.argsort(self.importance)[::-1]
 
         feature_num = len(self.importance)

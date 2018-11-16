@@ -9,9 +9,10 @@ from config import cfg
 
 class GridSearch(object):
 
-    def __init__(self, sample_mode, select_col):
-        self.T = Training(sample_mode, select_col)
+    def __init__(self, sample_mode, select_col, fill_mode=None):
+        self.T = Training(sample_mode, select_col, fill_mode)
         self.sample_mode = sample_mode
+        self.fill_mode = fill_mode
 
     @staticmethod
     def _generate_grid_pairs(param_grid):
@@ -97,7 +98,13 @@ class GridSearch(object):
                 frequency = grid_search_tuple_dict['frequency']
                 hw_seasonal = grid_search_tuple_dict['hw_seasonal']
 
-                data_range = {'train_start': '{}-1-4'.format(start_year),
+                train_start = {2009: '2009-01-05',
+                               2010: '2010-01-04',
+                               2011: '2011-01-04',
+                               2012: '2010-01-04',
+                               2013: '2010-01-04'}
+
+                data_range = {'train_start': train_start[start_year],
                               'valid_start': valid_range[0],
                               'valid_end': valid_range[1]}
 
@@ -111,14 +118,16 @@ class GridSearch(object):
                     seasonal=hw_seasonal,
                     data_range=data_range,
                     save_result=save_every_result,
-                    append_info='_' + str(idx) + append_info)
+                    append_info='_' + self.fill_mode + '_'
+                                + str(idx) + append_info)
 
                 utils.save_ts_log_to_csv(
                     log_path=cfg.log_path,
                     grid_search_tuple_dict=grid_search_tuple_dict,
                     cost=cost,
                     idx=idx,
-                    append_info='_' + self.sample_mode + append_info)
+                    append_info='_' + self.sample_mode
+                                + '_' + self.fill_mode  + append_info)
 
                 pred_final = np.append(pred_final, cost)
                 df_total[str(idx)] = pred_final
@@ -142,10 +151,12 @@ class GridSearch(object):
         df_total = df_total.stack().unstack(0)
         df_total.to_csv(join(
             cfg.log_path,
-            'all_results_{}_{}.csv'.format(self.sample_mode, append_info)))
+            'all_results_{}_{}_{}.csv'.format(
+                self.sample_mode, self.fill_mode, append_info)))
         df_valid.to_csv(join(
             cfg.log_path,
-            'all_valid_{}_{}.csv'.format(self.sample_mode, append_info)))
+            'all_valid_{}_{}_{}.csv'.format(
+                self.sample_mode, self.fill_mode, append_info)))
 
         utils.thick_line()
         print('All Task Done! Using {:.2f}s...'.format(
@@ -157,14 +168,15 @@ if __name__ == '__main__':
 
     parameter_grid = [[['model_name', ('arima', 'stl', 'ets', 'hw')],
                        ['start_year', (2009, 2010, 2011, 2012)],
-                       ['valid_range', [('2013-12-2', '2013-12-31'), ('2013-1-4', '2013-1-31')]],
+                       ['valid_range', [('2013-12-02', '2013-12-31'),
+                                        ('2013-01-04', '2013-01-31')]],
                        ['frequency', (5, 10, 15, 20, 25, 30)],
                        ['hw_seasonal', ['multiplicative']]],
                       [['model_name', ('arima', 'stl', 'ets', 'hw')],
                        ['start_year', [2013]],
-                       ['valid_range', [('2013-12-2', '2013-12-31')]],
+                       ['valid_range', [('2013-12-02', '2013-12-31')]],
                        ['frequency', (5, 10, 15, 20, 25, 30)],
                        ['hw_seasonal', ['multiplicative']]]]
 
-    GS = GridSearch(sample_mode='day', select_col='CONTPRICE')
+    GS = GridSearch(sample_mode='day', select_col='CONTPRICE', fill_mode='ff')
     GS.grid_search(parameter_grid, save_every_result=True, append_info='')

@@ -19,21 +19,21 @@ def save_data_to_pkl(data, data_path):
 
 
 # Save predictions to csv file
-def save_pred_to_csv(file_path, index, prob):
+def save_pred_to_csv(file_path, index, pred):
     print('Saving Predictions To CSV File...')
 
-    df = pd.DataFrame({'id': index, 'proba': prob})
+    df = pd.DataFrame({'FORECASTDATE': index, 'FORECASTPRICE': pred})
 
     df.to_csv(file_path + 'result.csv', sep=',', index=False)
 
 
-# Save probabilities of train set to csv file
-def save_prob_train_to_csv(file_path, prob, label):
+# Save pred of train set to csv file
+def save_pred_train_to_csv(file_path, pred, label):
     print('Saving Probabilities of Train Set To CSV File...')
 
-    df = pd.DataFrame({'prob_train': prob, 'label': label})
+    df = pd.DataFrame({'pred_train': pred, 'label': label})
 
-    df.to_csv(file_path + 'prob_train.csv', sep=',', index=True)
+    df.to_csv(file_path + 'pred_train.csv', sep=',', index=True)
 
 
 # Save Grid Search Logs
@@ -689,10 +689,10 @@ def load_preprocessed_negative_data(data_file_path):
 
 
 # Calculate LogLoss without weight
-def log_loss(prob, y):
-    loss = - np.sum(np.multiply(y, np.log(prob)) +
+def log_loss(pred, y):
+    loss = - np.sum(np.multiply(y, np.log(pred)) +
                     np.multiply((np.ones_like(y) - y),
-                                np.log(np.ones_like(prob) - prob)))
+                                np.log(np.ones_like(pred) - pred)))
 
     loss /= len(y)
 
@@ -700,12 +700,12 @@ def log_loss(prob, y):
 
 
 # Calculate LogLoss with weight
-def log_loss_with_weight(prob, y, w):
+def log_loss_with_weight(pred, y, w):
     w = w / np.sum(w)
 
-    loss = - np.sum(np.multiply(w, (np.multiply(y, np.log(prob)) +
+    loss = - np.sum(np.multiply(w, (np.multiply(y, np.log(pred)) +
                                     np.multiply((np.ones_like(y) - y), np.log(
-                                        np.ones_like(prob) - prob)))))
+                                        np.ones_like(pred) - pred)))))
 
     return loss
 
@@ -722,12 +722,12 @@ def print_grid_info(model_name, parameters, parameters_grid):
 
 
 # Print CV Losses
-def print_loss(prob_train, y_train, w_train, prob_valid, y_valid, w_valid):
-    loss_train = log_loss(prob_train, y_train)
-    loss_valid = log_loss(prob_valid, y_valid)
+def print_loss(pred_train, y_train, w_train, pred_valid, y_valid, w_valid):
+    loss_train = log_loss(pred_train, y_train)
+    loss_valid = log_loss(pred_valid, y_valid)
 
-    loss_train_w = log_loss_with_weight(prob_train, y_train, w_train)
-    loss_valid_w = log_loss_with_weight(prob_valid, y_valid, w_valid)
+    loss_train_w = log_loss_with_weight(pred_train, y_train, w_train)
+    loss_valid_w = log_loss_with_weight(pred_valid, y_valid, w_valid)
 
     print('------------------------------------------------------')
     print('Train LogLoss: {:.8f}\n'.format(loss_train),
@@ -739,12 +739,12 @@ def print_loss(prob_train, y_train, w_train, prob_valid, y_valid, w_valid):
 
 
 # Print Loss and Accuracy of Global Validation Set
-def print_global_valid_loss_and_acc(prob_global_valid, y_global_valid,
+def print_global_valid_loss_and_acc(pred_global_valid, y_global_valid,
                                     w_global_valid):
-    loss_global_valid = log_loss(prob_global_valid, y_global_valid)
-    loss_global_valid_w = log_loss_with_weight(prob_global_valid,
+    loss_global_valid = log_loss(pred_global_valid, y_global_valid)
+    loss_global_valid_w = log_loss_with_weight(pred_global_valid,
                                                y_global_valid, w_global_valid)
-    acc_global_valid = get_accuracy(prob_global_valid, y_global_valid)
+    acc_global_valid = get_accuracy(pred_global_valid, y_global_valid)
     print('------------------------------------------------------')
     print('Global Valid LogLoss: {:.8f}\n'.format(loss_global_valid),
           'Global Valid LogLoss with Weight: {:.8f}\n'.format(
@@ -769,11 +769,11 @@ def print_total_loss(loss_train_mean, loss_valid_mean, loss_train_w_mean,
 
 
 # Print Total Loss of Global Validation Set
-def print_total_global_valid_loss_and_acc(prob_global_valid_mean,
+def print_total_global_valid_loss_and_acc(pred_global_valid_mean,
                                           y_global_valid,
                                           loss_global_valid_mean,
                                           loss_global_valid_w_mean):
-    acc_total_global_valid = get_accuracy(prob_global_valid_mean,
+    acc_total_global_valid = get_accuracy(pred_global_valid_mean,
                                           y_global_valid)
     print('------------------------------------------------------')
     print('Total Global Valid LogLoss: {:.8f}\n'.format(loss_global_valid_mean),
@@ -815,21 +815,21 @@ def check_dir_model(pred_path, loss_log_path=None):
     if loss_log_path is not None:
         path_list = [pred_path,
                      pred_path + 'cv_results/',
-                     pred_path + 'cv_prob_train/',
+                     pred_path + 'cv_pred_train/',
                      pred_path + 'final_results/',
-                     pred_path + 'final_prob_train/',
+                     pred_path + 'final_pred_train/',
                      loss_log_path]
     else:
         path_list = [pred_path,
                      pred_path + 'cv_results/',
-                     pred_path + 'cv_prob_train/']
+                     pred_path + 'cv_pred_train/']
 
     check_dir(path_list)
 
 
 # Get Accuracy
-def get_accuracy(prob, label):
-    prediction = [1 if pro > 0.5 else 0 for pro in prob]
+def get_accuracy(pred, label):
+    prediction = [1 if pro > 0.5 else 0 for pro in pred]
     correct_pred = [1 if p == y else 0 for p, y in zip(prediction, label)]
     accuracy = np.mean(correct_pred)
 
@@ -837,13 +837,13 @@ def get_accuracy(prob, label):
 
 
 # Get Accuracies of Eras
-def get_era_accuracy(prob, y, e, show_accuracy):
-    prob_sorted = np.zeros_like(prob, dtype=np.float64)
+def get_era_accuracy(pred, y, e, show_accuracy):
+    pred_sorted = np.zeros_like(pred, dtype=np.float64)
     y_sorted = np.zeros_like(y, dtype=np.float64)
     e_sorted = np.zeros_like(e, dtype=int)
 
     for raw, idx in enumerate(np.argsort(e)):
-        prob_sorted[raw] = prob[idx]
+        pred_sorted[raw] = pred[idx]
         y_sorted[raw] = y[idx]
         e_sorted[raw] = int(e[idx])
 
@@ -854,9 +854,9 @@ def get_era_accuracy(prob, y, e, show_accuracy):
     for i, ele in enumerate(e_sorted):
 
         if i == len(e_sorted) - 1:
-            prob_era = prob_sorted[era_index]
+            pred_era = pred_sorted[era_index]
             y_era = y_sorted[era_index]
-            acc_era = get_accuracy(prob_era, y_era)
+            acc_era = get_accuracy(pred_era, y_era)
             accuracy_eras[iter_era] = acc_era
             if show_accuracy:
                 print('Accuracy of Era-{}: {:.3f}%'.format(iter_era,
@@ -864,9 +864,9 @@ def get_era_accuracy(prob, y, e, show_accuracy):
         elif ele == iter_era:
             era_index.append(i)
         else:
-            prob_era = prob_sorted[era_index]
+            pred_era = pred_sorted[era_index]
             y_era = y_sorted[era_index]
-            acc_era = get_accuracy(prob_era, y_era)
+            acc_era = get_accuracy(pred_era, y_era)
             accuracy_eras[iter_era] = acc_era
             if show_accuracy:
                 print('Accuracy of Era-{}: {:.3f}%'.format(iter_era,
@@ -878,7 +878,7 @@ def get_era_accuracy(prob, y, e, show_accuracy):
 
 
 # Get Accuracies of Eras of  Train Probabilities
-def get_train_era_accuracy(prob, y, e, show_accuracy):
+def get_train_era_accuracy(pred, y, e, show_accuracy):
     era_index = []
     accuracy_eras = {}
     iter_era = e[0]
@@ -886,9 +886,9 @@ def get_train_era_accuracy(prob, y, e, show_accuracy):
     for i, ele in enumerate(e):
 
         if i == len(e) - 1:
-            prob_era = prob[era_index]
+            pred_era = pred[era_index]
             y_era = y[era_index]
-            acc_era = get_accuracy(prob_era, y_era)
+            acc_era = get_accuracy(pred_era, y_era)
             accuracy_eras[iter_era] = acc_era
             if show_accuracy:
                 print('Accuracy of Era-{}: {:.3f}%'.format(iter_era,
@@ -896,9 +896,9 @@ def get_train_era_accuracy(prob, y, e, show_accuracy):
         elif ele == iter_era:
             era_index.append(i)
         else:
-            prob_era = prob[era_index]
+            pred_era = pred[era_index]
             y_era = y[era_index]
-            acc_era = get_accuracy(prob_era, y_era)
+            acc_era = get_accuracy(pred_era, y_era)
             accuracy_eras[iter_era] = acc_era
             if show_accuracy:
                 print('Accuracy of Era-{}: {:.3f}%'.format(iter_era,
@@ -910,10 +910,10 @@ def get_train_era_accuracy(prob, y, e, show_accuracy):
 
 
 # Print and Get Accuracy of Eras
-def print_and_get_accuracy(prob_train, y_train, e_train, prob_valid, y_valid,
+def print_and_get_accuracy(pred_train, y_train, e_train, pred_valid, y_valid,
                            e_valid, show_accuracy):
-    acc_train_cv = get_accuracy(prob_train, y_train)
-    acc_valid_cv = get_accuracy(prob_valid, y_valid)
+    acc_train_cv = get_accuracy(pred_train, y_train)
+    acc_valid_cv = get_accuracy(pred_valid, y_valid)
 
     if show_accuracy:
         print('------------------------------------------------------')
@@ -923,22 +923,22 @@ def print_and_get_accuracy(prob_train, y_train, e_train, prob_valid, y_valid,
         print('------------------------------------------------------')
         print('Accuracies of Train Eras:')
 
-    acc_train_era = get_era_accuracy(prob_train, y_train, e_train,
+    acc_train_era = get_era_accuracy(pred_train, y_train, e_train,
                                      show_accuracy)
 
     if show_accuracy:
         print('------------------------------------------------------')
         print('Accuracies of Validation Eras:')
 
-    acc_valid_era = get_era_accuracy(prob_valid, y_valid, e_valid,
+    acc_valid_era = get_era_accuracy(pred_valid, y_valid, e_valid,
                                      show_accuracy)
 
     return acc_train_cv, acc_valid_cv, acc_train_era, acc_valid_era
 
 
 # Print and Get Accuracies of Eras of  Train Probabilities
-def print_and_get_train_accuracy(prob_train, y_train, e_train, show_accuracy):
-    acc_train = get_accuracy(prob_train, y_train)
+def print_and_get_train_accuracy(pred_train, y_train, e_train, show_accuracy):
+    acc_train = get_accuracy(pred_train, y_train)
 
     if show_accuracy:
         print('------------------------------------------------------')
@@ -946,7 +946,7 @@ def print_and_get_train_accuracy(prob_train, y_train, e_train, show_accuracy):
         print('------------------------------------------------------')
         print('Accuracies of Total Train Eras:')
 
-    acc_train_era = get_train_era_accuracy(prob_train, y_train, e_train,
+    acc_train_era = get_train_era_accuracy(pred_train, y_train, e_train,
                                            show_accuracy)
 
     return acc_train, acc_train_era
@@ -960,7 +960,7 @@ def check_bad_cv(trained_cv, valid_era):
 
     negative_era_counter = 0
     for era in valid_era:
-        if era in preprocess.negative_era_list:
+        if era in cfg.preprocess.negative_era_list:
             negative_era_counter += 1
     bad_num_negative_era = negative_era_counter not in [0, 1]
     if bad_num_negative_era:
@@ -973,48 +973,48 @@ def check_bad_cv(trained_cv, valid_era):
 
 
 # Calculate Means
-def calculate_means(prob_test_total, prob_train_total, loss_train_total,
+def calculate_means(pred_test_total, pred_train_total, loss_train_total,
                     loss_valid_total, loss_train_w_total, loss_valid_w_total,
                     weights=None):
     if weights is None:
-        prob_test_mean = np.mean(np.array(prob_test_total), axis=0)
-        prob_train_mean = np.mean(np.array(prob_train_total), axis=0)
+        pred_test_mean = np.mean(np.array(pred_test_total), axis=0)
+        pred_train_mean = np.mean(np.array(pred_train_total), axis=0)
         loss_train_mean = np.mean(loss_train_total)
         loss_valid_mean = np.mean(loss_valid_total)
         loss_train_w_mean = np.mean(loss_train_w_total)
         loss_valid_w_mean = np.mean(loss_valid_w_total)
     else:
-        prob_test_mean = np.average(np.array(prob_test_total), axis=0,
+        pred_test_mean = np.average(np.array(pred_test_total), axis=0,
                                     weights=weights)
-        prob_train_mean = np.average(np.array(prob_train_total), axis=0,
+        pred_train_mean = np.average(np.array(pred_train_total), axis=0,
                                      weights=weights)
         loss_train_mean = np.average(loss_train_total, weights=weights)
         loss_valid_mean = np.average(loss_valid_total, weights=weights)
         loss_train_w_mean = np.average(loss_train_w_total, weights=weights)
         loss_valid_w_mean = np.average(loss_valid_w_total, weights=weights)
 
-    return prob_test_mean, prob_train_mean, loss_train_mean, \
+    return pred_test_mean, pred_train_mean, loss_train_mean, \
            loss_valid_mean, loss_train_w_mean, loss_valid_w_mean
 
 
 # Calculate Global Validation Means
-def calculate_global_valid_means(prob_global_valid_total,
+def calculate_global_valid_means(pred_global_valid_total,
                                  loss_global_valid_total,
                                  loss_global_valid_w_total, weights=None):
     if weights is None:
-        prob_global_valid_mean = np.mean(np.array(prob_global_valid_total),
+        pred_global_valid_mean = np.mean(np.array(pred_global_valid_total),
                                          axis=0)
         loss_global_valid_mean = np.mean(loss_global_valid_total)
         loss_global_valid_w_mean = np.mean(loss_global_valid_w_total)
     else:
-        prob_global_valid_mean = np.average(np.array(prob_global_valid_total),
+        pred_global_valid_mean = np.average(np.array(pred_global_valid_total),
                                             axis=0, weights=weights)
         loss_global_valid_mean = np.average(loss_global_valid_total,
                                             weights=weights)
         loss_global_valid_w_mean = np.average(loss_global_valid_w_total,
                                               weights=weights)
 
-    return prob_global_valid_mean, loss_global_valid_mean, loss_global_valid_w_mean
+    return pred_global_valid_mean, loss_global_valid_mean, loss_global_valid_w_mean
 
 
 # Calculate Boost Round Means
@@ -1125,7 +1125,7 @@ def get_grid_search_log_path(csv_log_path, model_name, param_name_list,
 
 # Get Category Feature's Index
 def get_idx_category(x_train, use_multi_group):
-    if preprocess.group_list is not None:
+    if cfg.group_list is not None:
         if use_multi_group:
             print('------------------------------------------------------')
             print('[W] Using Multi Groups...')

@@ -8,15 +8,23 @@ from config import cfg
 
 class Training(object):
 
-    def __init__(self, sample_mode, select_col):
+    def __init__(self, sample_mode, select_col, fill_mode=None):
 
         self.sample_mode = sample_mode
         self.select_col = select_col
         self.suffix = utils.get_suffix(sample_mode)
 
         file_path = cfg.preprocessed_path
-        self.data = pd.read_csv(
-            join(file_path, 'total_{}.csv'.format(sample_mode)))
+        if fill_mode:
+            self.data = pd.read_csv(
+                join(file_path, 'total_work_day_{}.csv'.format(fill_mode)),
+                index_col='DATE',
+                parse_dates=['DATE'],)
+        else:
+            self.data = pd.read_csv(
+                join(file_path, 'total_{}.csv'.format(sample_mode)),
+                index_col='DATE',
+                parse_dates=['DATE'],)
 
     def _train_valid_split(self, train_start, valid_start, valid_end):
 
@@ -29,8 +37,7 @@ class Training(object):
             final_data = []
             for row_iter in self.data.iterrows():
                 row = row_iter[1]
-                date_str = '{}-{}-{}'.format(
-                    int(row['YEAR']), int(row['MONTH']), int(row['DAY']))
+                date_str = row_iter[0].to_pydatetime().strftime('%Y-%m-%d')
                 if date_str == train_start:
                     train_started = True
                 if train_started:
@@ -67,7 +74,6 @@ class Training(object):
                 train_start=data_range['train_start'],
                 valid_start=data_range['valid_start'],
                 valid_end=data_range['valid_end'])
-            # print(x_train, y, x_final)
             pred_valid = TimeSeriesModel(
                 x_train, freq, forest_num=len(y),
                 seasonal=seasonal).predict(model_name)
