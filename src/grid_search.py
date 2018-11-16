@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from os.path import join
 from models import utils
 from main_ts import Training
@@ -20,7 +21,7 @@ class GridSearch(object):
         self.sample_mode = sample_mode
 
     @staticmethod
-    def _generate_grid_pairs(param_grid):
+    def _generate_grid_combinations(param_grid):
 
         n_param = len(param_grid)
         n_value = 1
@@ -50,19 +51,16 @@ class GridSearch(object):
                 value_list.pop()
         generate_value_matrix_(0)
 
-        grid_pairs = []
+        grid_combs = []
         for i_param_value in range(n_value):
             grid_search_tuple_dict = {}
-            param_info = ''
             for i_param in range(n_param):
                 param_name_i = param_name[i_param]
                 param_value_i = param_value[i_param][i_param_value]
-                param_info += '_' + utils.get_simple_param_name(
-                    param_name_i) + '-' + str(param_value_i)
                 grid_search_tuple_dict[param_name_i] = param_value_i
-            grid_pairs.append((grid_search_tuple_dict, param_info))
+            grid_combs.append(grid_search_tuple_dict)
 
-        return grid_pairs
+        return grid_combs
 
     def grid_search(self, param_grid,
                     save_every_result=False, append_info=None):
@@ -85,31 +83,26 @@ class GridSearch(object):
             utils.thick_line()
             print('Grid Searching Task {}...'.format(i))
 
-
-            grid_pairs = self._generate_grid_pairs(grid_i)
-            print('Pairs in the Task: {}'.format(len(grid_pairs)))
+            grid_combs = self._generate_grid_combinations(grid_i)
+            print('Parameter combination in the Task: {}'.format(
+                len(grid_combs)))
             utils.thin_line()
 
-            for grid_search_tuple_dict, param_info in grid_pairs:
-
-                grid_time = time.time()
-
-                print('Grid Searching idx_{}: param_{}...'.format(
-                    idx, param_info))
-
+            for grid_search_tuple_dict in tqdm(grid_combs,
+                                               total=len(grid_combs),
+                                               ncols=100,
+                                               unit=' comb'):
                 model_name = grid_search_tuple_dict['model_name']
                 start_year = grid_search_tuple_dict['start_year']
                 valid_range = grid_search_tuple_dict['valid_range']
                 frequency = grid_search_tuple_dict['frequency']
                 hw_seasonal = grid_search_tuple_dict['hw_seasonal']
                 fill_mode = grid_search_tuple_dict['fill_mode']
-
                 train_start = {2009: '2009-01-05',
                                2010: '2010-01-04',
                                2011: '2011-01-04',
                                2012: '2010-01-04',
                                2013: '2010-01-04'}
-
                 data_range = {'train_start': train_start[start_year],
                               'valid_start': valid_range[0],
                               'valid_end': valid_range[1]}
@@ -143,8 +136,6 @@ class GridSearch(object):
                 df_valid[str(idx)] = pred_cost_valid
 
                 idx += 1
-
-                print('Done! Using {:.2f}s...'.format(time.time() - grid_time))
 
             utils.thin_line()
             print('Task {} Done! Using {:.2f}s...'.format(
