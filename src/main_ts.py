@@ -117,7 +117,7 @@ class Training(object):
                 join(cfg.source_path, 'z_hack_submit_new_day_all.csv'),
                 index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
         else:
-            raise ValueError
+            raise ValueError('Wrong Fill Mode! Find: {}'.format(self.fill_mode))
 
         # Assign prediction to DataFrame
         assert len(df_pred_sf) == len(pred_final_sf), \
@@ -136,7 +136,7 @@ class Training(object):
         utils.check_dir([cfg.result_path])
         shifted_result_path = join(cfg.result_path, 'shifted_results')
         utils.check_dir([shifted_result_path])
-        df_pred.to_csv(join(
+        df_pred_sf.to_csv(join(
             shifted_result_path, 'result_sf{}.csv'.format(append_info)),
             float_format='%.2f')
 
@@ -165,7 +165,7 @@ class Training(object):
             cost = self._calc_acc(y, pred_valid)
 
             # Save shifted results for different fill modes
-            if (self.fill_mode != 'no') and save_shifted_result:
+            if (self.fill_mode is not None) and save_shifted_result:
                 self.get_shifted_results(
                     model_name, x_final,freq, seasonal, append_info)
         else:
