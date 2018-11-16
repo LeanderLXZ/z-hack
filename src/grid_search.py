@@ -10,7 +10,9 @@ from config import cfg
 
 class GridSearch(object):
 
-    def __init__(self, sample_mode, select_col):
+    def __init__(self,
+                 sample_mode,
+                 select_col):
 
         self.T = {'no': Training(sample_mode, select_col),
                   'w_ff': Training(sample_mode, select_col, 'w_ff'),
@@ -65,8 +67,11 @@ class GridSearch(object):
 
         return grid_combs
 
-    def grid_search(self, param_grid,
-                    save_every_result=False, append_info=None):
+    def grid_search(self,
+                    param_grid,
+                    save_every_result=False,
+                    save_shifted_result=False,
+                    append_info=None):
 
         start_time = time.time()
 
@@ -120,6 +125,7 @@ class GridSearch(object):
                     seasonal=hw_seasonal,
                     data_range=data_range,
                     save_result=save_every_result,
+                    save_shifted_result=save_shifted_result,
                     append_info='_' + str(idx) + append_info)
 
                 utils.save_ts_log_to_csv(
@@ -226,4 +232,7 @@ if __name__ == '__main__':
     ]
 
     GS = GridSearch(sample_mode='day', select_col='CONTPRICE')
-    GS.grid_search(parameter_grid, save_every_result=True, append_info='')
+    GS.grid_search(parameter_grid,
+                   save_every_result=True,
+                   save_shifted_result=True,
+                   append_info='')

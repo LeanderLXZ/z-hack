@@ -8,11 +8,15 @@ from config import cfg
 
 class Training(object):
 
-    def __init__(self, sample_mode, select_col, fill_mode=None):
+    def __init__(self,
+                 sample_mode,
+                 select_col,
+                 fill_mode=None):
 
         self.sample_mode = sample_mode
         self.select_col = select_col
         self.suffix = utils.get_suffix(sample_mode)
+        self.fill_mode = fill_mode
 
         file_path = cfg.preprocessed_path
         if fill_mode:
@@ -30,7 +34,10 @@ class Training(object):
                 index_col='DATE',
                 parse_dates=['DATE'],)
 
-    def _train_valid_split(self, train_start, valid_start, valid_end):
+    def _train_valid_split(self,
+                           train_start,
+                           valid_start,
+                           valid_end):
 
         if self.sample_mode == 'day':
             train_started = False
@@ -70,8 +77,79 @@ class Training(object):
             cost.append(abs(y_i - pred_i))
         return np.mean(cost)
 
-    def train(self, model_name, freq, forest_num=21, seasonal='multiplicative',
-              data_range=None, save_result=False, append_info=None):
+    def save_result(self,
+                    pred,
+                    model_name,
+                    append_info=None):
+
+        utils.check_dir([cfg.result_path])
+        df_pred = pd.read_csv(
+            join(cfg.source_path, 'z_hack_submit_new.csv'),
+            index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        assert len(df_pred) == len(pred), (len(df_pred), len(pred))
+        df_pred['FORECASTPRICE'] = pred
+        if append_info is None:
+            append_info = '_' + model_name + '_' + self.sample_mode
+        df_pred.to_csv(
+            join(cfg.result_path, 'result{}.csv'.format(append_info)),
+            float_format='%.2f')
+
+    def get_shifted_results(self,
+                            model_name,
+                            x_final,
+                            freq,
+                            seasonal,
+                            append_info=None):
+
+        # Get predictions for different lengths for different fill modes
+        if self.fill_mode in ['w_ff', 'w_bf', 'w_avg', 'w_line']:
+            pred_final_sf = TimeSeriesModel(
+                x_final, freq, 22,
+                seasonal=seasonal).predict(model_name)
+            df_pred_sf = pd.read_csv(
+                join(cfg.source_path, 'z_hack_submit_new_day_work.csv'),
+                index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        elif self.fill_mode in ['a_ff', 'a_bf', 'a_avg', 'a_line']:
+            pred_final_sf = TimeSeriesModel(
+                x_final, freq, 30,
+                seasonal=seasonal).predict(model_name)
+            df_pred_sf = pd.read_csv(
+                join(cfg.source_path, 'z_hack_submit_new_day_all.csv'),
+                index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        else:
+            raise ValueError
+
+        # Assign prediction to DataFrame
+        assert len(df_pred_sf) == len(pred_final_sf), \
+            (len(df_pred_sf), len(pred_final_sf))
+        df_pred_sf['FORECASTPRICE'] = pred_final_sf
+
+        # Reindex DataFrame to get final results
+        df_pred = pd.read_csv(
+            join(cfg.source_path, 'z_hack_submit_new.csv'),
+            index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        df_pred_sf = df_pred_sf.reindex(df_pred.index)
+
+        # Save shifted results
+        assert len(df_pred_sf) == len(df_pred), \
+            (len(df_pred_sf), len(df_pred))
+        utils.check_dir([cfg.result_path])
+        shifted_result_path = join(cfg.result_path, 'shifted_results')
+        utils.check_dir([shifted_result_path])
+        df_pred.to_csv(join(
+            shifted_result_path, 'result_sf{}.csv'.format(append_info)),
+            float_format='%.2f')
+
+
+    def train(self,
+              model_name,
+              freq,
+              forest_num=21,
+              seasonal='multiplicative',
+              data_range=None,
+              save_result=False,
+              save_shifted_result=False,
+              append_info=None):
 
         if data_range:
             x_train, y, x_final = self._train_valid_split(
@@ -86,6 +164,10 @@ class Training(object):
                 seasonal=seasonal).predict(model_name)
             cost = self._calc_acc(y, pred_valid)
 
+            # Save shifted results for different fill modes
+            if (self.fill_mode != 'no') and save_shifted_result:
+                self.get_shifted_results(
+                    model_name, x_final,freq, seasonal, append_info)
         else:
             x_train = self.data[
                 '{}_{}'.format(self.select_col, self.suffix)].values
@@ -95,19 +177,9 @@ class Training(object):
             pred_valid = None
             cost = None
 
+        # Save final results
         if save_result:
-            utils.check_dir([cfg.result_path])
-            df_pred = pd.read_csv(
-                join(cfg.source_path, 'z_hack_submit_new.csv'),
-                index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
-            assert len(df_pred) == len(pred_final), \
-                (len(df_pred), len(pred_final))
-            df_pred['FORECASTPRICE'] = pred_final
-            if append_info is None:
-                append_info = '_' + model_name + '_' + self.sample_mode
-            df_pred.to_csv(join(cfg.result_path,
-                           'result{}.csv'.format(append_info)),
-                           float_format='%.2f')
+            self.save_result(pred_final, model_name, append_info)
 
         return pred_final, cost, pred_valid
 
