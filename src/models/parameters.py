@@ -103,7 +103,7 @@ class SingleModel(object):
 
     def rf_train(self, train_seed, cv_seed, parameters=None, grid_search_tuple_list=None):
         """
-            Random Forest
+            Random forecast
         """
         if parameters is None:
             parameters = {'bootstrap': True,
@@ -130,11 +130,11 @@ class SingleModel(object):
         self.cv_args['cv_seed'] = cv_seed
 
         if self.train_args['use_global_valid']:
-            model = RandomForest(self.x_train, self.y_train, self.w_train, self.e_train,
+            model = Randomforecast(self.x_train, self.y_train, self.w_train, self.e_train,
                                  self.x_test, self.id_test, self.x_gl_valid, self.y_gl_valid,
                                  self.w_gl_valid, self.e_gl_valid, use_multi_group=self.use_multi_group)
         else:
-            model = RandomForest(self.x_train, self.y_train, self.w_train, self.e_train,
+            model = Randomforecast(self.x_train, self.y_train, self.w_train, self.e_train,
                                  self.x_test, self.id_test, use_multi_group=self.use_multi_group)
 
         self.train_model(model=model, grid_search_tuple_list=grid_search_tuple_list)
@@ -724,7 +724,7 @@ class SKGridSearch(object):
     @staticmethod
     def rf_grid_search(train_seed, cv_seed):
         """
-            Random Forest
+            Random forecast
         """
         _log_path = cfg.grid_search_log_path + 'rf_'
 
@@ -748,7 +748,7 @@ class SKGridSearch(object):
                       'verbose': 2,
                       'warm_start': False}
 
-        RF = RandomForest(x_train, y_train, w_train, e_train, x_test, pct_test, id_test)
+        RF = Randomforecast(x_train, y_train, w_train, e_train, x_test, pct_test, id_test)
 
         clf = RF.get_clf(parameters)
 
@@ -765,7 +765,7 @@ class SKGridSearch(object):
         SKLearnGridSearch.grid_search(_log_path, x_train, y_train, e_train, clf, n_valid=4, n_cv=20, n_era=20,
                                       cv_seed=cv_seed, params=parameters, params_grid=parameters_grid)
 
-        utils.print_grid_info('Random Forest', parameters, parameters_grid)
+        utils.print_grid_info('Random forecast', parameters, parameters_grid)
 
     @staticmethod
     def et_grid_search(train_seed, cv_seed):
@@ -990,7 +990,7 @@ class SKGridSearch(object):
                       'boosting_type': 'gbdt',        # traditional Gradient Boosting Decision Tree.
                       # 'boosting_type': 'dart',        # Dropouts meet Multiple Additive Regression Trees.
                       # 'boosting_type': 'goss',        # Gradient-based One-Side Sampling.
-                      # 'boosting_type': 'rf',          # Random Forest.
+                      # 'boosting_type': 'rf',          # Random forecast.
                       'num_leaves': 3,                # <2^(max_depth)
                       'max_depth': 8,                 # default=-1
                       'n_estimators': 79,
@@ -1059,7 +1059,7 @@ class SKGridSearch(object):
                       'boosting_type': 'gbdt',        # traditional Gradient Boosting Decision Tree.
                       # 'boosting_type': 'dart',        # Dropouts meet Multiple Additive Regression Trees.
                       # 'boosting_type': 'goss',        # Gradient-based One-Side Sampling.
-                      # 'boosting_type': 'rf',          # Random Forest.
+                      # 'boosting_type': 'rf',          # Random forecast.
                       'num_leaves': 3,  # <2^(max_depth)
                       'max_depth': 8,  # default=-1
                       'n_estimators': 79,

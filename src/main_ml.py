@@ -1,354 +1,243 @@
-import time
-from models.training_mode import TrainingMode
+from models import utils
+import pandas as pd
+import numpy as np
+from os.path import join
+from models.regressors import MachineLearningModel
+from config import cfg
 
 
 class Training(object):
 
-    def __init__(self):
-        pass
+    def __init__(self,
+                 sample_mode,
+                 select_col,
+                 fill_mode=None):
+
+        self.sample_mode = sample_mode
+        self.select_col = select_col
+        self.suffix = utils.get_suffix(sample_mode)
+        self.fill_mode = fill_mode
+
+        file_path = cfg.preprocessed_path
+        if fill_mode:
+            print('Loading {}...'.format(
+                join(file_path, 'total_day_{}.csv'.format(fill_mode))))
+            self.data = pd.read_csv(
+                join(file_path, 'total_day_{}.csv'.format(fill_mode)),
+                index_col='DATE',
+                parse_dates=['DATE'])
+        else:
+            print('Loading {}...'.format(
+                join(file_path, 'total_{}.csv'.format(sample_mode))))
+            self.data = pd.read_csv(
+                join(file_path, 'total_{}.csv'.format(sample_mode)),
+                index_col='DATE',
+                parse_dates=['DATE'])
+            # print(self.data)
+
+    def _train_valid_split(self,
+                           train_start,
+                           valid_start,
+                           valid_end):
+
+        if self.sample_mode == 'day':
+            train_started = False
+            valid_started = False
+            valid_ended = False
+            train_data = []
+            valid_data = []
+            final_data = []
+            for row_iter in self.data.iterrows():
+                row = row_iter[1]
+                date_str = row_iter[0].to_pydatetime().strftime('%Y-%m-%d')
+                if date_str == train_start:
+                    train_started = True
+                if train_started:
+                    final_data.append(
+                        row['{}_{}'.format(self.select_col, self.suffix)])
+                if date_str == valid_start:
+                    valid_started = True
+                if train_started and not valid_started:
+                    train_data.append(
+                        row['{}_{}'.format(self.select_col, self.suffix)])
+                if valid_started and not valid_ended:
+                    valid_data.append(
+                        row['{}_{}'.format(self.select_col, self.suffix)])
+                if date_str == valid_end:
+                    valid_ended = True
+            return np.array(train_data), np.array(valid_data), \
+                   np.array(final_data)
 
     @staticmethod
-    def get_base_params(model_name=None):
-        """
-            Get Base Parameters
-        """
-        if model_name == 'xgb':
-            """
-                XGB
-            """
-            base_parameters = {'learning_rate': 0.003,
-                               'gamma': 0.001,
-                               'max_depth': 10,
-                               'min_child_weight': 8,
-                               'subsample': 0.92,
-                               'colsample_bytree': 0.85,
-                               'colsample_bylevel': 0.7,
-                               'lambda': 0,
-                               'alpha': 0,
-                               'early_stopping_rounds': 10000,
-                               'n_jobs': -1,
-                               'objective': 'binary:logistic',
-                               'eval_metric': 'logloss'}
-
-        elif model_name == 'lgb':
-            """
-                LGB
-            """
-            base_parameters = {'application': 'binary',
-                               'boosting': 'gbdt',
-                               'learning_rate': 0.003,
-                               'num_leaves': 88,
-                               'max_depth': 9,
-                               'min_data_in_leaf': 2500,
-                               'min_sum_hessian_in_leaf': 1e-3,
-                               'feature_fraction': 0.6,
-                               'feature_fraction_seed': 19,
-                               'bagging_fraction': 0.8,
-                               'bagging_freq': 5,
-                               'bagging_seed': 1,
-                               'lambda_l1': 0,
-                               'lambda_l2': 0,
-                               'min_gain_to_split': 0,
-                               'max_bin': 225,
-                               'min_data_in_bin': 5,
-                               'metric': 'binary_logloss',
-                               'num_threads': -1,
-                               'verbosity': 1,
-                               'early_stopping_rounds': 10000}
-
-        elif model_name == 'lgb_fi':
-            """
-                LGB Forward Increase
-            """
-            base_parameters = {'application': 'binary',
-                               'boosting': 'gbdt',
-                               'learning_rate': 0.003,
-                               'num_leaves': 88,
-                               'max_depth': 8,
-                               'min_data_in_leaf': 2500,
-                               'min_sum_hessian_in_leaf': 1e-3,
-                               'feature_fraction': 0.5,
-                               'feature_fraction_seed': 19,
-                               'bagging_fraction': 0.7,
-                               'bagging_freq': 9,
-                               'bagging_seed': 1,
-                               'lambda_l1': 0,
-                               'lambda_l2': 0,
-                               'min_gain_to_split': 0,
-                               'max_bin': 225,
-                               'min_data_in_bin': 5,
-                               'metric': 'binary_logloss',
-                               'num_threads': -1,
-                               'verbosity': 1,
-                               'early_stopping_rounds': 10000}
-
-        elif model_name == 'xgb_fi':
-            """
-                XGB Forward Increase
-            """
-            base_parameters = {'learning_rate': 0.003,
-                               'gamma': 0.001,
-                               'max_depth': 10,
-                               'min_child_weight': 8,
-                               'subsample': 0.92,
-                               'colsample_bytree': 0.85,
-                               'colsample_bylevel': 0.7,
-                               'lambda': 0,
-                               'alpha': 0,
-                               'early_stopping_rounds': 10000,
-                               'n_jobs': -1,
-                               'objective': 'binary:logistic',
-                               'eval_metric': 'logloss'
-                               }
-
-        elif model_name == 'lgb_fw':
-            """
-               LGB Forward Window
-            """
-            base_parameters = {'application': 'binary',
-                               'boosting': 'gbdt',
-                               'learning_rate': 0.003,
-                               'num_leaves': 88,
-                               'max_depth': 8,
-                               'min_data_in_leaf': 2500,
-                               'min_sum_hessian_in_leaf': 1e-3,
-                               'feature_fraction': 0.5,
-                               'feature_fraction_seed': 19,
-                               'bagging_fraction': 0.5,
-                               'bagging_freq': 3,
-                               'bagging_seed': 1,
-                               'lambda_l1': 0,
-                               'lambda_l2': 0,
-                               'min_gain_to_split': 0,
-                               'max_bin': 225,
-                               'min_data_in_bin': 5,
-                               'metric': 'binary_logloss',
-                               'num_threads': -1,
-                               'verbosity': 1,
-                               'early_stopping_rounds': 10000}
-
-        elif model_name == 'xgb_fw':
-            """
-                XGB Forward Window
-            """
-            base_parameters = {'learning_rate': 0.003,
-                               'gamma': 0.001,
-                               'max_depth': 11,
-                               'min_child_weight': 9,
-                               'subsample': 0.92,
-                               'colsample_bytree': 0.9,
-                               'colsample_bylevel': 0.75,
-                               'lambda': 0,
-                               'alpha': 0,
-                               'early_stopping_rounds': 10000,
-                               'n_jobs': -1,
-                               'objective': 'binary:logistic',
-                               'eval_metric': 'logloss'}
-
-        else:
-            print('------------------------------------------------------')
-            print('[W] Training without Base Parameters')
-            base_parameters = None
-
-        return base_parameters
-
-    def get_cv_args(self, model_name=None):
-
-        from models.cross_validation import CrossValidation
-
-        if model_name == 'lgb_fi':
-            """
-                LGB Forward Increase
-            """
-            cv_weights = self.get_cv_weight('range', 1, 21)
-            cv_args = {'valid_rate': 0.125,
-                       'n_cv': 20,
-                       'n_era': 78,
-                       'cv_generator': CrossValidation.forward_increase,
-                       'cv_weights': cv_weights}
-
-        elif model_name == 'xgb_fi':
-            """
-                XGB Forward Increase
-            """
-            cv_weights = self.get_cv_weight('range', 1, 21)
-            cv_args = {'valid_rate': 0.125,
-                       'n_cv': 20,
-                       'n_era': 78,
-                       'cv_generator': CrossValidation.forward_increase,
-                       'cv_weights': cv_weights}
-
-        elif model_name == 'lgb_fw':
-            """
-               LGB Forward Window
-            """
-            cv_args = {'valid_rate': 0.1,
-                       'n_cv': 10,
-                       'n_era': 78,
-                       'cv_generator': CrossValidation.forward_window,
-                       'window_size': 26}
-
-        elif model_name == 'xgb_fw':
-            """
-                XGB Forward Window
-            """
-            cv_args = {'ensemble': True,
-                       'n_cv': 12,
-                       'n_era': 78,
-                       'cv_generator': CrossValidation.forward_window,
-                       'window_size': 26}
-
-        else:
-            cv_args = {'n_valid': 24,
-                       'n_cv': 20,
-                       'n_era': 78}
-            print('------------------------------------------------------')
-            print('[W] Training with Base cv_args:\n', cv_args)
-
-        return cv_args
+    def series_to_features(series, feature_num):
+        features = []
+        label = []
+        pred_head = None
+        idx_start = 0
+        idx_end = feature_num
+        while (idx_end + 1) < len(series):
+            features.append(series[idx_start:idx_end])
+            label.append(series[idx_end + 1])
+            idx_start += 1
+            idx_end += 1
+            if idx_end == len(series) - 1:
+                pred_head = [series[idx_start:idx_end]]
+        assert len(features[0]) == feature_num
+        assert len(pred_head[0]) == feature_num
+        return np.array(features), np.array(label), np.array(pred_head)
 
     @staticmethod
-    def train_diff_round(model_name, TM, num_boost_round_list=None, n_epoch=1, full_grid_search=False,
-                         use_multi_group=False, train_seed_list=None, cv_seed_list=None, base_parameters=None,
-                         parameter_grid_list=None, save_final_pred=True, reduced_feature_list=None,
-                         train_args=None, cv_args=None):
+    def _calc_acc(y, pred):
+        if pred.sum() < 1:
+            return np.nan
+        assert len(y) == len(pred), (len(y), len(pred))
+        cost = []
+        for y_i, pred_i in zip(y, pred):
+            cost.append(abs(y_i - pred_i))
+        return np.mean(cost)
 
-        for num_boost_round in num_boost_round_list:
-            append_info = train_args['append_info']
-            train_args['append_info'] = append_info + '_' + str(num_boost_round)
-            TM.auto_train_boost_round(model_name=model_name, num_boost_round=num_boost_round, n_epoch=n_epoch,
-                                      full_grid_search=full_grid_search, use_multi_group=use_multi_group,
-                                      train_seed_list=train_seed_list, cv_seed_list=cv_seed_list,
-                                      base_parameters=base_parameters, parameter_grid_list=parameter_grid_list,
-                                      save_final_pred=save_final_pred, reduced_feature_list=reduced_feature_list,
-                                      train_args=train_args, cv_args=cv_args)
-            train_args['append_info'] = append_info
+    def save_result(self,
+                    pred,
+                    model_name,
+                    append_info=None):
 
-    @staticmethod
-    def get_cv_weight(mode, start, stop):
+        utils.check_dir([cfg.result_path])
+        df_pred = pd.read_csv(
+            join(cfg.source_path, 'z_hack_submit_new.csv'),
+            index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        assert len(df_pred) == len(pred), (len(df_pred), len(pred))
+        df_pred['FORECASTPRICE'] = pred
+        if append_info is None:
+            append_info = '_' + model_name + '_' + self.sample_mode
+        df_pred.to_csv(
+            join(cfg.result_path, 'result{}.csv'.format(append_info)),
+            float_format='%.2f')
 
-        from math import log
+    def get_shifted_results(self,
+                            model_name,
+                            x_final,
+                            y_final,
+                            head_final,
+                            append_info=None):
 
-        if mode == 'range':
-            cv_weights = list(range(start, stop))
-        elif mode == 'log':
-            cv_weights = [log(i/2 + 1) for i in range(start, stop)]
+        # Get predictions for different lengths for different fill modes
+        if self.fill_mode in ['w_ff', 'w_bf', 'w_avg', 'w_line']:
+            pred_final_sf = MachineLearningModel(
+                x_final, y_final, head_final,
+                forecast_num=22).predict(model_name)
+            df_pred_sf = pd.read_csv(
+                join(cfg.source_path, 'z_hack_submit_new_day_work.csv'),
+                index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        elif self.fill_mode in ['a_ff', 'a_bf', 'a_avg', 'a_line']:
+            pred_final_sf = MachineLearningModel(
+                x_final, y_final, head_final,
+                forecast_num=30).predict(model_name)
+            df_pred_sf = pd.read_csv(
+                join(cfg.source_path, 'z_hack_submit_new_day_all.csv'),
+                index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
         else:
-            cv_weights = [1 for _ in range(start, stop)]
+            raise ValueError('Wrong Fill Mode! Find: {}'.format(self.fill_mode))
 
-        return cv_weights
+        # Assign prediction to DataFrame
+        assert len(df_pred_sf) == len(pred_final_sf), \
+            (len(df_pred_sf), len(pred_final_sf))
+        df_pred_sf['FORECASTPRICE'] = pred_final_sf
 
-    def train(self):
-        """
-            ## Auto Train with Logs of Boost Round ##
+        # Reindex DataFrame to get final results
+        df_pred = pd.read_csv(
+            join(cfg.source_path, 'z_hack_submit_new.csv'),
+            index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        df_pred_sf = df_pred_sf.reindex(df_pred.index)
 
-            Model Name:
-            'lr':           Logistic Regression
-            'rf':           Random Forest
-            'et':           Extra Trees
-            'ab':           AdaBoost
-            'gb':           GradientBoosting
-            'xgb':          XGBoost
-            'xgb_sk':       XGBoost using scikit-learn module
-            'lgb':          LightGBM
-            'lgb_sk':       LightGBM using scikit-learn module
-            'cb':           CatBoost
-            'dnn':          Deep Neural Networks
-            'stack_lgb':    LightGBM for stack layer
-            'christar':     Christar1991
-            'prejudge_b':   PrejudgeBinary
-            'prejudge_m':   PrejudgeMultiClass
-            'stack_t':      StackTree
-        """
-        TM = TrainingMode()
+        # Save shifted results
+        assert len(df_pred_sf) == len(df_pred), \
+            (len(df_pred_sf), len(df_pred))
+        utils.check_dir([cfg.result_path])
+        shifted_result_path = join(cfg.result_path, 'shifted_results')
+        utils.check_dir([shifted_result_path])
+        df_pred_sf.to_csv(join(
+            shifted_result_path, 'result_sf{}.csv'.format(append_info)),
+            float_format='%.2f')
 
 
-        """
-            Training Arguments
-        """
-        train_args = {'prescale': False,
-                      'postscale': True,
-                      'use_scale_pos_weight': False,
-                      'use_global_valid': False,
-                      'use_custom_obj': False,
-                      'show_importance': False,
-                      'show_accuracy': True,
-                      'save_final_pred': True,
-                      'save_final_prob_train': False,
-                      'save_cv_pred': True,
-                      'save_cv_prob_train': False,
-                      'save_csv_log': True,
-                      'append_info': 'forward_window'}
+    def train(self,
+              model_name,
+              feature_num=50,
+              forecast_num=21,
+              data_range=None,
+              save_result=False,
+              save_shifted_result=False,
+              append_info=None):
 
-        """
-            Cross Validation Arguments
-        """
-        from models.cross_validation import CrossValidation
-        cv_args = {'ensemble': True,
-                   'n_cv': 12,
-                   'n_era': 90,
-                   'cv_generator': CrossValidation.forward_window,
-                   'window_size': 40}
-        # cv_args = self.get_cv_args('xgb_fw')
+        x_train, y_valid, x_final = self._train_valid_split(
+            train_start=data_range['train_start'],
+            valid_start=data_range['valid_start'],
+            valid_end=data_range['valid_end'])
+        print(x_train)
+        x_valid, y_valid, head_valid = \
+            self.series_to_features(x_train, feature_num)
+        print(x_valid, y_valid, head_valid)
+        pred_valid = MachineLearningModel(
+            x_valid, y_valid, head_valid,
+            forecast_num=len(y_valid)).predict(model_name)
+        x_final, y_final, head_final = \
+            self.series_to_features(x_final, feature_num)
+        print(x_final, y_final, head_final)
+        pred_final = MachineLearningModel(
+            x_final, y_final, head_final,
+            forecast_num=forecast_num).predict(model_name)
+        cost = self._calc_acc(y_valid, pred_valid)
 
-        """
-            Base Parameters
-        """
-        base_parameters = self.get_base_params('xgb_fw')
+        # Save shifted results for different fill modes
+        if (self.fill_mode is not None) and save_shifted_result:
+            self.get_shifted_results(
+                model_name, x_final, y_final, head_final, append_info)
 
-        # base_parameters = None
+        # Save final results
+        if save_result:
+            self.save_result(pred_final, model_name, append_info)
 
-        """
-            Auto Train with Logs of Boost Round
-        """
-        # cv_weights_range = [self.get_cv_weight('range', 1, i+1) for i in [5, 8, 10, 12, 15, 20]]
-        # cv_weights_log = [self.get_cv_weight('log', 1, i+1) for i in [5, 8, 10, 12, 15, 20]]
-        # n_cv_list = [5, 8, 10, 12, 15, 20] * 6
-        # import numpy as np
-        # valid_rate_list = np.array([[i]*6 for i in [0.075, 0.1, 0.125, 0.15, 0.175, 0.2]]).reshape(-1,).tolist()
-        # cv_weights_list = cv_weights_log*6
-        pg_list = [
-                   # [['n_cv', (8, 9, 10), (11, 12, 13), [15], (18, 20)],
-                   #  ['valid_rate', (0.075, 0.1, 0.125, 0.15, 0.166, 0.175, 0.2)],
-                   #  ['window_size', (32, 34, 36, 40, 42, 44, 46, 48)]]
-                   # [['n_cv', n_cv_list],
-                   #  ['valid_rate', valid_rate_list],
-                   #  ['cv_weights', cv_weights_list]]
-                   # [
-                   #  ['max_depth', [11]],
-                   #  ['min_child_weight', [9]],
-                   #  ['subsample', (0.88, 0.90, 0.92)],
-                   #  ['colsample_bytree', (0.86, 0.88, 0.9)],
-                   #  ['colsample_bylevel', (0.7, 0.75, 0.8)]
-                   #  ]
-                   [['learning_rate', [0.003]]]
-                   ]
-        train_seed_list = [999]
-        cv_seed_list = [95]
-        TM.auto_train_boost_round('xgb', num_boost_round=100, n_epoch=1, full_grid_search=True,
-                                  use_multi_group=False, train_seed_list=train_seed_list, cv_seed_list=cv_seed_list,
-                                  base_parameters=base_parameters, parameter_grid_list=pg_list, save_final_pred=False,
-                                  train_args=train_args, cv_args=cv_args)
-
-        # """Train Different Rounds"""
-        # num_boost_round_list = [83, 85, 87]
-        # self.train_diff_round('xgb', TM, num_boost_round_list=num_boost_round_list, n_epoch=1, full_grid_search=True,
-        #                       use_multi_group=False, train_seed_list=train_seed_list, cv_seed_list=cv_seed_list,
-        #                       base_parameters=base_parameters, parameter_grid_list=pg_list, save_final_pred=True,
-        #                       reduced_feature_list=reduced_feature_list, train_args=train_args, cv_args=cv_args)
+        return pred_final, cost, pred_valid
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
-    start_time = time.time()
+    utils.check_dir([cfg.result_path])
 
-    print('======================================================')
-    print('Start Training...')
+    df = pd.read_csv(join(cfg.source_path, 'z_hack_submit_new.csv'),
+                     index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+    T = Training('day', 'CONTPRICE')
 
-    T = Training()
-    T.train()
+    range_1 = {'train_start': '2009-01-04',
+               'valid_start': '2013-12-02',
+               'valid_end': '2013-12-31'}
 
-    print('======================================================')
-    print('All Tasks Done!')
-    print('Total Time: {}s'.format(time.time() - start_time))
-    print('======================================================')
+    df['knn_day'], _, _ = T.train(
+        'knn', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['svm_day'], _, _ = T.train(
+        'svm', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['dt_day'], _, _ = T.train(
+        'dt', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['rf_day'], _, _ = T.train(
+        'rf', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['et_day'], _, _ = T.train(
+        'et', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['ab_day'], _, _ = T.train(
+        'ab', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['gb_day'], _, _ = T.train(
+        'gb', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['xgb_day'], _, _ = T.train(
+        'xgb', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+    df['lgb_day'], _, _ = T.train(
+        'lgb', feature_num=50, forecast_num=21,
+        data_range=range_1, save_result=True)
+
+    df.to_csv(join(cfg.log_path, 'result_day.csv'))

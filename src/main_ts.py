@@ -25,14 +25,14 @@ class Training(object):
             self.data = pd.read_csv(
                 join(file_path, 'total_day_{}.csv'.format(fill_mode)),
                 index_col='DATE',
-                parse_dates=['DATE'],)
+                parse_dates=['DATE'])
         else:
             print('Loading {}...'.format(
                 join(file_path, 'total_{}.csv'.format(sample_mode))))
             self.data = pd.read_csv(
                 join(file_path, 'total_{}.csv'.format(sample_mode)),
                 index_col='DATE',
-                parse_dates=['DATE'],)
+                parse_dates=['DATE'])
 
     def _train_valid_split(self,
                            train_start,
@@ -144,7 +144,7 @@ class Training(object):
     def train(self,
               model_name,
               freq,
-              forest_num=21,
+              forecast_num=21,
               seasonal='multiplicative',
               data_range=None,
               save_result=False,
@@ -156,11 +156,12 @@ class Training(object):
                 train_start=data_range['train_start'],
                 valid_start=data_range['valid_start'],
                 valid_end=data_range['valid_end'])
+            # print(x_train, y, x_final)
             pred_valid = TimeSeriesModel(
-                x_train, freq, forest_num=len(y),
+                x_train, freq, forecast_num=len(y),
                 seasonal=seasonal).predict(model_name)
             pred_final = TimeSeriesModel(
-                x_final, freq, forest_num,
+                x_final, freq, forecast_num,
                 seasonal=seasonal).predict(model_name)
             cost = self._calc_acc(y, pred_valid)
 
@@ -172,7 +173,7 @@ class Training(object):
             x_train = self.data[
                 '{}_{}'.format(self.select_col, self.suffix)].values
             pred_final = TimeSeriesModel(
-                x_train, freq, forest_num,
+                x_train, freq, forecast_num,
                 seasonal=seasonal).predict(model_name)
             pred_valid = None
             cost = None
@@ -192,18 +193,18 @@ if __name__ == '__main__':
                      index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
     T = Training('day', 'CONTPRICE')
 
-    range_1 = {'train_start': '2011-1-4',
-               'valid_start': '2013-1-4',
-               'valid_end': '2013-1-31'}
+    range_1 = {'train_start': '2011-01-04',
+               'valid_start': '2013-12-02',
+               'valid_end': '2013-12-31'}
 
     df['arima_day'], _, _ = T.train(
-        'arima', freq=5, forest_num=21, data_range=range_1, save_result=True)
+        'arima', freq=5, forecast_num=21, data_range=range_1, save_result=True)
     df['stl_day'], _, _ = T.train(
-        'stl', freq=5, forest_num=21, data_range=range_1, save_result=True)
+        'stl', freq=5, forecast_num=21, data_range=range_1, save_result=True)
     df['ets_day'], _, _ = T.train(
-        'ets', freq=5, forest_num=21, data_range=range_1, save_result=True)
+        'ets', freq=5, forecast_num=21, data_range=range_1, save_result=True)
     df['hw_day'], _, _ = T.train(
-        'hw', freq=10, forest_num=21, seasonal='multiplicative',
+        'hw', freq=10, forecast_num=21, seasonal='multiplicative',
         data_range=range_1, save_result=True)
 
     df.to_csv(join(cfg.log_path, 'result_day.csv'))

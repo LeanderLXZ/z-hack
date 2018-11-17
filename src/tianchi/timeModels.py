@@ -4,10 +4,10 @@ from rpy2.robjects.packages import importr
 
 #这是时序模型的模块
 class R_Models(object):
-    def __init__(self, data_series, forest_num=1):
+    def __init__(self, data_series, forecast_num=1):
         utils = importr('forecast')
         self.data_series = data_series
-        self.forest_num = forest_num
+        self.forecast_num = forecast_num
 
     def data_process(self):
         data_series = robjects.IntVector(self.data_series)
@@ -20,7 +20,7 @@ class Arima(R_Models):
         data = self.data_process()
         try:
             model = robjects.r['auto.arima'](data)
-            result = robjects.r.forecast(model,self.forest_num)
+            result = robjects.r.forecast(model,self.forecast_num)
             return result.rx(4)
         except Exception as e:
             print("Error:",e)
@@ -30,7 +30,7 @@ class STL_ETS(R_Models):
     def stl(self):
         data = self.data_process()
         try:
-            result = robjects.r.stlf(data,self.forest_num)
+            result = robjects.r.stlf(data,self.forecast_num)
             return result.rx(2).rx2(1)
         except Exception as e:
             print("Error:",e)
@@ -40,7 +40,7 @@ class STL_ETS(R_Models):
         data = self.data_process()
         try:
             model = robjects.r.ets(data)
-            result = robjects.r.predict(model,h=self.forest_num)
+            result = robjects.r.predict(model,h=self.forecast_num)
             return result.rx(2).rx2(1)
         except Exception as e:
             print("Error:",e)
@@ -51,7 +51,7 @@ class HoltWinters(R_Models):
         data = self.data_process()
         try:
             model = robjects.r.hw(data)
-            result = robjects.r.predict(model,h=self.forest_num,seasonal='multiplicative')
+            result = robjects.r.predict(model,h=self.forecast_num,seasonal='multiplicative')
             return result.rx(2).rx2(1)
         except Exception as e:
             print("Error:",e)

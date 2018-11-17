@@ -78,7 +78,7 @@ class GridSearch(object):
         df_total = pd.read_csv(
             join(cfg.source_path, 'z_hack_submit_new_with_cost.csv'),
             index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
-        forest_num = len(df_total) - 1
+        forecast_num = len(df_total) - 1
 
         df_valid = pd.DataFrame(index=range(35))
 
@@ -121,7 +121,7 @@ class GridSearch(object):
                 pred_final, cost, pred_valid = self.T[fill_mode].train(
                     model_name=model_name,
                     freq=frequency,
-                    forest_num=forest_num,
+                    forecast_num=forecast_num,
                     seasonal=hw_seasonal,
                     data_range=data_range,
                     save_result=save_every_result,

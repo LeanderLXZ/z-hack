@@ -10,7 +10,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
@@ -88,19 +88,6 @@ class ModelBase(object):
 
     def get_pattern(self):
         return None
-
-    def prejudge_fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None, use_weight=True):
-
-        # Get Classifier
-        reg = self.get_reg(parameters)
-
-        # Training Model
-        if use_weight:
-            reg.fit(x_train, y_train, sample_weight=w_train)
-        else:
-            reg.fit(x_train, y_train)
-
-        return reg
 
     def fit_with_round_log(self, boost_round_log_path, cv_count, x_train, y_train,
                            w_train, x_valid, y_valid, w_valid, parameters,
@@ -199,7 +186,7 @@ class ModelBase(object):
         print('------------------------------------------------------')
         print('Predicting Test Result...')
 
-        pred_test = np.array(reg.predict(x_test))[:, 1]
+        pred_test = np.array(reg.predict(x_test))
 
         if pred_path is not None:
             utils.save_pred_to_csv(pred_path, self.id_test, pred_test)
@@ -762,178 +749,6 @@ class ModelBase(object):
 
         return pred_valid, pred_test, losses
 
-    def prejudge_train_binary(self, pred_path=None, n_splits=10, n_cv=10, cv_seed=None, use_weight=True,
-                              parameters=None, show_importance=False, show_accuracy=False, cv_generator=None):
-
-        # Check if directories exit or not
-        utils.check_dir_model(pred_path)
-        utils.check_dir([pred_path])
-
-        count = 0
-        pred_test_total = []
-        pred_train_total = []
-        loss_train_total = []
-        loss_valid_total = []
-        loss_train_w_total = []
-        loss_valid_w_total = []
-
-        # Get Cross Validation Generator
-        if cv_generator is None:
-            cv_generator = CrossValidation.sk_k_fold
-
-        # Cross Validation
-        for x_train, y_train, w_train, \
-            x_valid, y_valid, w_valid in cv_generator(x=self.x_train, y=self.y_train, w=self.w_train,
-                                                      n_splits=n_splits, n_cv=n_cv, cv_seed=cv_seed):
-
-            count += 1
-
-            print('======================================================')
-            print('Training on the Cross Validation Set: {}/{}'.format(count, n_cv))
-
-            # Fitting and Training Model
-            reg = self.prejudge_fit(x_train, y_train, w_train, x_valid, y_valid, w_valid,
-                                    parameters=parameters, use_weight=use_weight)
-
-            # Feature Importance
-            if show_importance:
-                self.get_importance(reg)
-
-            # Prediction
-            pred_test = self.predict(reg, self.x_test, pred_path=pred_path +
-                                     'cv_results/' + self.model_name + '_cv_{}_'.format(count))
-
-            # Save Train Probabilities to CSV File
-            pred_train = self.get_pred_train(reg, x_train)
-            pred_train_all = self.get_pred_train(reg, self.x_train)
-
-            # Prediction
-            pred_valid = self.predict(reg, x_valid)
-
-            # Print LogLoss
-            print('------------------------------------------------------')
-            loss_train, loss_valid, loss_train_w, loss_valid_w = \
-                utils.print_loss(pred_train, self.y_train, self.w_train, pred_valid, y_valid, w_valid)
-
-            pred_test_total.append(pred_test)
-            pred_train_total.append(pred_train_all)
-            loss_train_total.append(loss_train)
-            loss_valid_total.append(loss_valid)
-            loss_train_w_total.append(loss_train_w)
-            loss_valid_w_total.append(loss_valid_w)
-
-        print('======================================================')
-        print('Calculating Final Result...')
-
-        pred_test_mean = np.mean(np.array(pred_test_total), axis=0)
-        pred_train_mean = np.mean(np.array(pred_train_total), axis=0)
-        loss_train_mean = np.mean(np.array(loss_train_total), axis=0)
-        loss_valid_mean = np.mean(np.array(loss_valid_total), axis=0)
-        loss_train_w_mean = np.mean(np.array(loss_train_w_total), axis=0)
-        loss_valid_w_mean = np.mean(np.array(loss_valid_w_total), axis=0)
-
-        # Print Total Losses
-        utils.print_total_loss(loss_train_mean, loss_valid_mean, loss_train_w_mean, loss_valid_w_mean)
-
-        # Print and Get Accuracies of CV of All Train Set
-        _, _ = utils.print_and_get_train_accuracy(pred_train_mean, self.y_train, self.e_train, show_accuracy)
-
-        # Save Final Result
-        utils.save_pred_to_csv(pred_path + 'final_results/' + self.model_name + '_', self.id_test, pred_test_mean)
-
-        return pred_test_mean
-
-    def prejudge_stack_train(self, x_train, x_g_train, y_train, w_train, e_train, x_valid,
-                             x_g_valid, y_valid, w_valid, e_valid, x_test, x_g_test,
-                             pred_path=None, loss_log_path=None, csv_log_path=None, parameters=None, cv_args=None,
-                             train_seed=None, show_importance=False, show_accuracy=False, save_final_pred=True,
-                             save_csv_log=True, csv_idx=None, mode=None, file_name_params=None,
-                             param_name_list=None, param_value_list=None, append_info=None):
-
-        # Check if directories exit or not
-        utils.check_dir_model(pred_path, loss_log_path)
-        utils.check_dir([pred_path, loss_log_path, csv_log_path])
-
-        cv_args_copy = copy.deepcopy(cv_args)
-        if 'n_valid' in cv_args:
-            n_valid = cv_args_copy['n_valid']
-        elif 'valid_rate' in cv_args:
-            n_valid = cv_args_copy['valid_rate']
-        else:
-            n_valid = ''
-        n_cv = cv_args_copy['n_cv']
-        cv_seed = cv_args_copy['cv_seed']
-
-        # Append Information
-        if append_info is None:
-            append_info = 'v-' + str(n_valid) + '_c-' + str(n_cv)
-
-        if csv_idx is None:
-            csv_idx = self.model_name
-
-        # Print Start Information and Get Model Name
-        self.print_start_info()
-
-        # Select Group Variable
-        x_train, x_valid, x_test = self.select_category_variable(x_train, x_g_train, x_valid,
-                                                                 x_g_valid, x_test, x_g_test)
-
-        print('======================================================')
-        print('Number of Features: ', x_train.shape[1])
-        print('------------------------------------------------------')
-
-        # Fitting and Training Model
-        reg = self.fit(x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters)
-
-        # Feature Importance
-        if show_importance:
-            self.get_importance(reg)
-
-        # Test Probabilities
-        pred_test = self.predict(reg, x_test)
-
-        # Train Probabilities
-        pred_train = self.get_pred_train(reg, x_train)
-
-        # Get Probabilities of Validation Set
-        pred_valid = self.predict(reg, x_valid)
-
-        # Print LogLoss
-        loss_train, loss_valid, loss_train_w, loss_valid_w = \
-            utils.print_loss(pred_train, y_train, w_train, pred_valid, y_valid, w_valid)
-
-        # Save 'num_boost_round'
-        if self.model_name in ['xgb', 'lgb']:
-            parameters['num_boost_round'] = self.num_boost_round
-
-        # Save Final Result
-        if save_final_pred:
-            self.save_final_pred(mode, save_final_pred, pred_test, pred_path,
-                                 parameters, csv_idx, train_seed, cv_seed, file_name_params=file_name_params,
-                                 append_info=append_info)
-
-        # Print Total Losses
-        utils.print_total_loss(loss_train, loss_valid, loss_train_w, loss_valid_w)
-        losses = [loss_train, loss_valid, loss_train_w, loss_valid_w]
-
-        # Print and Get Accuracies of CV
-        acc_train, acc_valid, acc_train_era, acc_valid_era = \
-            utils.print_and_get_accuracy(pred_train, y_train, e_train,
-                                         pred_valid, y_valid, e_valid, show_accuracy)
-
-        # Save Final Losses to File
-        utils.save_final_loss_log(loss_log_path + self.model_name + '_', parameters, n_valid, n_cv,
-                                  loss_train, loss_valid, loss_train_w, loss_valid_w,
-                                  train_seed, cv_seed, acc_train, acc_train_era)
-
-        # Save Loss Log to csv File
-        if save_csv_log:
-            self.save_csv_log(mode, csv_log_path, param_name_list, param_value_list, csv_idx,
-                              loss_train_w, loss_valid_w, acc_train, train_seed, cv_seed, n_valid, n_cv,
-                              parameters, file_name_params=file_name_params, append_info=append_info)
-
-        return pred_valid, pred_test, losses
-
 
 class LRegression(ModelBase):
     """
@@ -1049,20 +864,20 @@ class DecisionTree(ModelBase):
 
 class RandomForest(ModelBase):
     """
-        Random Forest
+        Random forecast
     """
     @staticmethod
     def get_reg(parameters):
 
         print('Initialize Model...')
-        reg = RandomForestClassifier(**parameters)
+        reg = RandomForestRegressor(**parameters)
 
         return reg
 
     def print_start_info(self):
 
         print('======================================================')
-        print('Training Random Forest...')
+        print('Training Random forecast...')
 
         self.model_name = 'rf'
 
@@ -1182,21 +997,6 @@ class XGBoost(ModelBase):
                                 obj=self.logloss_obj, evals=eval_list)
             else:
                 bst = xgb.train(parameters, d_train, num_boost_round=self.num_boost_round, evals=eval_list)
-
-        return bst
-
-    def prejudge_fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None, use_weight=True):
-
-        if use_weight:
-            d_train = xgb.DMatrix(x_train, label=y_train, weight=w_train)
-            d_valid = xgb.DMatrix(x_valid, label=y_valid, weight=w_valid)
-        else:
-            d_train = xgb.DMatrix(x_train, label=y_train)
-            d_valid = xgb.DMatrix(x_valid, label=y_valid)
-
-        # Booster
-        eval_list = [(d_train, 'Train'), (d_valid, 'Valid')]
-        bst = xgb.train(parameters, d_train, num_boost_round=self.num_boost_round, evals=eval_list)
 
         return bst
 
@@ -1352,29 +1152,6 @@ class LightGBM(ModelBase):
 
         return bst
 
-    def prejudge_fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None, use_weight=True):
-
-        # Get Category Feature's Index
-        idx_category = utils.get_idx_category(x_train, self.use_multi_group)
-
-        if use_weight:
-            d_train = lgb.Dataset(x_train, label=y_train, weight=w_train, categorical_feature=idx_category)
-            d_valid = lgb.Dataset(x_valid, label=y_valid, weight=w_valid, categorical_feature=idx_category)
-        else:
-            d_train = lgb.Dataset(x_train, label=y_train, categorical_feature=idx_category)
-            d_valid = lgb.Dataset(x_valid, label=y_valid, categorical_feature=idx_category)
-
-        # Booster
-        if self.postscale:
-            bst = lgb.train(parameters, d_train, num_boost_round=self.num_boost_round,
-                            valid_sets=[d_valid, d_train], valid_names=['Valid', 'Train'],
-                            feval=self.lgb_postscale_feval)
-        else:
-            bst = lgb.train(parameters, d_train, num_boost_round=self.num_boost_round,
-                            valid_sets=[d_valid, d_train], valid_names=['Valid', 'Train'])
-
-        return bst
-
     def get_pattern(self):
 
         if self.use_global_valid:
@@ -1428,64 +1205,6 @@ class LightGBM(ModelBase):
             utils.save_pred_train_to_csv(pred_path, pred_train, self.y_train)
 
         return pred_train
-
-    def prejudge_train_multiclass(self, pred_path=None, n_splits=10, n_cv=10, n_era=20, cv_seed=None,
-                                  use_weight=True, parameters=None, show_importance=False, cv_generator=None):
-
-        # Check if directories exit or not
-        utils.check_dir_model(pred_path)
-
-        cv_counter = 0
-        pred_test_total = np.array([])
-
-        # Get Cross Validation Generator
-        if cv_generator is None:
-            cv_generator = CrossValidation.sk_k_fold
-        print('------------------------------------------------------')
-        print('Using CV Generator: {}'.format(getattr(cv_generator, '__name__')))
-
-        # Cross Validation
-        for x_train, y_train, w_train, \
-            x_valid, y_valid, w_valid in cv_generator(x=self.x_train, y=self.y_train, w=self.w_train,
-                                                      n_splits=n_splits, n_cv=n_cv, cv_seed=cv_seed):
-
-            cv_counter += 1
-
-            print('======================================================')
-            print('Training on the Cross Validation Set: {}/{}'.format(cv_counter, n_cv))
-
-            # Get Category Feature's Index
-            idx_category = utils.get_idx_category(x_train, self.use_multi_group)
-
-            if use_weight:
-                d_train = lgb.Dataset(x_train, label=y_train, weight=w_train, categorical_feature=idx_category)
-                d_valid = lgb.Dataset(x_valid, label=y_valid, weight=w_valid, categorical_feature=idx_category)
-            else:
-                d_train = lgb.Dataset(x_train, label=y_train, categorical_feature=idx_category)
-                d_valid = lgb.Dataset(x_valid, label=y_valid, categorical_feature=idx_category)
-
-            # Booster
-            bst = lgb.train(parameters, d_train, num_boost_round=self.num_boost_round,
-                            valid_sets=[d_valid, d_train], valid_names=['Valid', 'Train'])
-
-            # Feature Importance
-            if show_importance:
-                self.get_importance(bst)
-
-            # Prediction
-            pred_test = self.predict(bst, self.x_test)
-
-            if cv_counter == 1:
-                pred_test_total = pred_test.reshape(-1, 1, n_era)
-            else:
-                np.concatenate((pred_test_total, pred_test.reshape(-1, 1, n_era)), axis=1)
-
-        print('======================================================')
-        print('Calculating Final Result...')
-
-        pred_test_mean = np.mean(pred_test_total, axis=1)
-
-        return pred_test_mean
 
 
 class SKLearnLightGBM(ModelBase):
@@ -1561,27 +1280,6 @@ class CatBoost(ModelBase):
         # Fitting and Training Model
         reg.fit(X=x_train, y=y_train, cat_features=idx_category, sample_weight=w_train,
                 baseline=None, use_best_model=None, eval_set=(x_valid, y_valid), verbose=True, plot=False)
-
-        return reg
-
-    def prejudge_fit(self, x_train, y_train, w_train, x_valid, y_valid, w_valid, parameters=None, use_weight=True):
-
-        # Get Classifier
-        reg = self.get_reg(parameters)
-
-        # Get Category Feature's Index
-        idx_category = utils.get_idx_category(x_train, self.use_multi_group)
-
-        # Convert Zeros in Weights to Small Positive Numbers
-        w_train = [0.001 if w == 0 else w for w in w_train]
-
-        # Fitting and Training Model
-        if use_weight:
-            reg.fit(X=x_train, y=y_train, cat_features=idx_category, sample_weight=w_train,
-                    baseline=None, use_best_model=None, eval_set=(x_valid, y_valid), verbose=True, plot=False)
-        else:
-            reg.fit(X=x_train, y=y_train, cat_features=idx_category, baseline=None,
-                    use_best_model=None, eval_set=(x_valid, y_valid), verbose=True, plot=False)
 
         return reg
 

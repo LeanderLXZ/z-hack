@@ -25,3 +25,5 @@
 *.html
 *.txt
 *.tsv
+*.zip
+!/grid_search_ts.py
