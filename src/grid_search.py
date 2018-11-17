@@ -80,7 +80,7 @@ class GridSearch(object):
             index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
         forest_num = len(df_total) - 1
 
-        df_valid = pd.DataFrame(index=range(30))
+        df_valid = pd.DataFrame(index=range(35))
 
         idx = 0
 
@@ -138,9 +138,9 @@ class GridSearch(object):
                 pred_final = np.append(pred_final, cost)
                 df_total[str(idx)] = pred_final
 
-                if len(pred_valid) < 29:
+                if len(pred_valid) < 34:
                     pred_valid = \
-                        np.append(pred_valid, np.zeros(29 - len(pred_valid)))
+                        np.append(pred_valid, np.zeros(34 - len(pred_valid)))
                 pred_cost_valid = np.append(pred_valid, cost)
                 df_valid[str(idx)] = pred_cost_valid
 
@@ -171,21 +171,21 @@ class GridSearch(object):
 if __name__ == '__main__':
 
     parameter_grid = [
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                          ('2013-01-04', '2013-01-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['multiplicative']]],
-
-        # start year 2013
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', [2013]],
-         ['valid_range', [('2013-12-02', '2013-12-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['multiplicative']]],
+        # [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
+        #  ['model_name', ('arima', 'stl', 'ets', 'hw')],
+        #  ['start_year', (2009, 2010, 2011, 2012)],
+        #  ['valid_range', [('2013-12-02', '2013-12-31'),
+        #                   ('2013-01-04', '2013-01-31')]],
+        #  ['frequency', (5, 10, 15, 20, 25, 30)],
+        #  ['hw_seasonal', ['multiplicative']]],
+        #
+        # # start year 2013
+        # [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
+        #  ['model_name', ('arima', 'stl', 'ets', 'hw')],
+        #  ['start_year', [2013]],
+        #  ['valid_range', [('2013-12-02', '2013-12-31')]],
+        #  ['frequency', (5, 10, 15, 20, 25, 30)],
+        #  ['hw_seasonal', ['multiplicative']]],
 
         # fill_mode -- all date -- freq=7
         [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
