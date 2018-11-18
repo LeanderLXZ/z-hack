@@ -170,7 +170,7 @@ class Training(object):
               save_shifted_result=False,
               append_info=None):
 
-        x_train, y_valid, x_final = self._train_valid_split(
+        x_train, y, x_final = self._train_valid_split(
             train_start=data_range['train_start'],
             valid_start=data_range['valid_start'],
             valid_end=data_range['valid_end'])
@@ -180,14 +180,14 @@ class Training(object):
         # print(x_valid, y_valid, head_valid)
         pred_valid = MachineLearningModel(
             x_valid, y_valid, head_valid,
-            forecast_num=len(y_valid)).predict(model_name)
+            forecast_num=len(y)).predict(model_name)
         x_final, y_final, head_final = \
             self.series_to_features(x_final, feature_num)
         # print(x_final, y_final, head_final)
         pred_final = MachineLearningModel(
             x_final, y_final, head_final,
             forecast_num=forecast_num).predict(model_name)
-        cost = self._calc_acc(y_valid, pred_valid)
+        cost = self._calc_acc(y, pred_valid)
 
         # Save shifted results for different fill modes
         if (self.fill_mode is not None) and save_shifted_result:

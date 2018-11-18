@@ -170,7 +170,7 @@ if __name__ == '__main__':
                         'a_ff', 'a_avg', 'a_line')],
          ['model_name', ('knn', 'svm', 'dt', 'rf',
                          'et', 'ab', 'gb', 'xgb', 'lgb')],
-         ['start_year', (2009, 2010, 2011)],
+         ['start_year', (2009, 2011)],
          ['valid_range', [('2013-12-02', '2013-12-31'),
                           ('2013-01-04', '2013-01-31')]],
          ['feature_num', (21, 30, 50, 100)]]
