@@ -1280,3 +1280,28 @@ def save_ts_log_to_csv(log_path, grid_search_tuple_dict,
                frequency, hw_seasonal, fill_mode, cost]
         writer = csv.writer(f)
         writer.writerow(log)
+
+
+# Save Log to csv File
+def save_ml_log_to_csv(log_path, grid_search_tuple_dict,
+                       cost, idx, append_info=''):
+    check_dir([log_path])
+    model_name = grid_search_tuple_dict['model_name']
+    start_year = grid_search_tuple_dict['start_year']
+    valid_range = grid_search_tuple_dict['valid_range']
+    feature_num = grid_search_tuple_dict['feature_num']
+    fill_mode = grid_search_tuple_dict['fill_mode']
+    file_path = os.path.join(log_path, 'cost_log{}.csv'.format(append_info))
+
+    if not os.path.isfile(file_path):
+        with open(file_path, 'w') as f:
+            header = ['idx', 'model_name', 'start_year', 'valid_range',
+                      'feature_num', 'fill_mode', 'cost']
+            writer = csv.writer(f)
+            writer.writerow(header)
+
+    with open(file_path, 'a') as f:
+        log = [idx, model_name, start_year, valid_range,
+               feature_num, fill_mode, cost]
+        writer = csv.writer(f)
+        writer.writerow(log)

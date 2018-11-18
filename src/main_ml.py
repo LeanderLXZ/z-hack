@@ -1,3 +1,4 @@
+import time
 from models import utils
 import pandas as pd
 import numpy as np
@@ -173,16 +174,16 @@ class Training(object):
             train_start=data_range['train_start'],
             valid_start=data_range['valid_start'],
             valid_end=data_range['valid_end'])
-        print(x_train)
+        # print(x_train)
         x_valid, y_valid, head_valid = \
             self.series_to_features(x_train, feature_num)
-        print(x_valid, y_valid, head_valid)
+        # print(x_valid, y_valid, head_valid)
         pred_valid = MachineLearningModel(
             x_valid, y_valid, head_valid,
             forecast_num=len(y_valid)).predict(model_name)
         x_final, y_final, head_final = \
             self.series_to_features(x_final, feature_num)
-        print(x_final, y_final, head_final)
+        # print(x_final, y_final, head_final)
         pred_final = MachineLearningModel(
             x_final, y_final, head_final,
             forecast_num=forecast_num).predict(model_name)
@@ -202,42 +203,28 @@ class Training(object):
 
 if __name__ == '__main__':
 
+    start_time = time.time()
     utils.check_dir([cfg.result_path])
-
     df = pd.read_csv(join(cfg.source_path, 'z_hack_submit_new.csv'),
                      index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
     T = Training('day', 'CONTPRICE')
-
     range_1 = {'train_start': '2009-01-04',
                'valid_start': '2013-12-02',
                'valid_end': '2013-12-31'}
 
-    df['knn_day'], _, _ = T.train(
-        'knn', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['svm_day'], _, _ = T.train(
-        'svm', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['dt_day'], _, _ = T.train(
-        'dt', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['rf_day'], _, _ = T.train(
-        'rf', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['et_day'], _, _ = T.train(
-        'et', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['ab_day'], _, _ = T.train(
-        'ab', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['gb_day'], _, _ = T.train(
-        'gb', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['xgb_day'], _, _ = T.train(
-        'xgb', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
-    df['lgb_day'], _, _ = T.train(
-        'lgb', feature_num=50, forecast_num=21,
-        data_range=range_1, save_result=True)
+    for model_i in ('knn', 'svm', 'dt', 'rf',
+                    'et', 'ab', 'gb', 'xgb', 'lgb'):
+        model_start_time = time.time()
+        utils.thin_line()
+        print('Start Model: {}'.format(model_i))
+        df['{}_day'.format(model_i)], _, _ = T.train(
+            model_i, feature_num=50, forecast_num=21,
+            data_range=range_1, save_result=True)
+        print('Model {} Done! Using time {:.2f}s...'.format(
+            model_i, time.time() - model_start_time))
 
     df.to_csv(join(cfg.log_path, 'result_day.csv'))
+    utils.thick_line()
+    print('All Done! Using time {:.2f}s...'.format(
+        time.time() - start_time))
+    utils.thick_line()

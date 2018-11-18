@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 from os.path import join
 from models import utils
-from main_ts import Training
+from main_ml import Training
 from config import cfg
 
 
@@ -100,8 +100,7 @@ class GridSearch(object):
                 model_name = grid_search_tuple_dict['model_name']
                 start_year = grid_search_tuple_dict['start_year']
                 valid_range = grid_search_tuple_dict['valid_range']
-                frequency = grid_search_tuple_dict['frequency']
-                hw_seasonal = grid_search_tuple_dict['hw_seasonal']
+                feature_num = grid_search_tuple_dict['feature_num']
                 fill_mode = grid_search_tuple_dict['fill_mode']
                 train_start = {2009: '2009-01-05',
                                2010: '2010-01-04',
@@ -117,15 +116,14 @@ class GridSearch(object):
 
                 pred_final, cost, pred_valid = self.T[fill_mode].train(
                     model_name=model_name,
-                    freq=frequency,
+                    feature_num=feature_num,
                     forecast_num=forecast_num,
-                    seasonal=hw_seasonal,
                     data_range=data_range,
                     save_result=save_every_result,
                     save_shifted_result=save_shifted_result,
                     append_info='_' + str(idx) + append_info)
 
-                utils.save_ts_log_to_csv(
+                utils.save_ml_log_to_csv(
                     log_path=cfg.log_path,
                     grid_search_tuple_dict=grid_search_tuple_dict,
                     cost=cost,
@@ -168,68 +166,18 @@ class GridSearch(object):
 if __name__ == '__main__':
 
     parameter_grid = [
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', (2009, 2010, 2011, 2012)],
+        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line',
+                        'a_ff', 'a_avg', 'a_line')],
+         ['model_name', ('knn', 'svm', 'dt', 'rf',
+                         'et', 'ab', 'gb', 'xgb', 'lgb')],
+         ['start_year', (2009, 2010, 2011)],
          ['valid_range', [('2013-12-02', '2013-12-31'),
                           ('2013-01-04', '2013-01-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['multiplicative']]],
-
-        # start year 2013
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', [2013]],
-         ['valid_range', [('2013-12-02', '2013-12-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['multiplicative']]],
-
-        # fill_mode -- all date -- freq=7
-        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                        ('2013-01-04', '2013-01-31')]],
-         ['frequency', (7, 14, 21, 28)],
-         ['hw_seasonal', ['multiplicative']]],
-        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', [2013]],
-         ['valid_range', [('2013-12-02', '2013-12-31')]],
-         ['frequency', (7, 14, 21, 28)],
-         ['hw_seasonal', ['multiplicative']]],
-
-        # Holt-Winters -- additive
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ['hw']],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                          ('2013-01-04', '2013-01-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['additive']]],
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ['hw']],
-         ['start_year', [2013]],
-         ['valid_range', [('2013-12-02', '2013-12-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['additive']]],
-        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
-         ['model_name', ['hw']],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                          ('2013-01-04', '2013-01-31')]],
-         ['frequency', (7, 14, 21, 28)],
-         ['hw_seasonal', ['additive']]],
-        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
-         ['model_name', ['hw']],
-         ['start_year', [2013]],
-         ['valid_range', [('2013-12-02', '2013-12-31')]],
-         ['frequency', (7, 14, 21, 28)],
-         ['hw_seasonal', ['additive']]]
+         ['feature_num', (21, 30, 50, 100)]]
     ]
 
     GS = GridSearch(sample_mode='day', select_col='CONTPRICE')
     GS.grid_search(parameter_grid,
                    save_every_result=True,
                    save_shifted_result=True,
-                   append_info='_ts')
+                   append_info='_ml')

@@ -26,7 +26,7 @@ class ModelBase(object):
     def get_reg(parameters):
         return DecisionTreeRegressor()
 
-    def fit(self, parameters=None, early_stopping_rounds=1000):
+    def fit(self, parameters=None, early_stopping_rounds=None):
         # Get Classifier
         reg = self.get_reg(parameters)
         # Training Model
@@ -60,7 +60,7 @@ class ModelBase(object):
                 f + 1, indices[f], importance[indices[f]]))
 
     def train(self, parameters=None, cv_generator=None,
-              show_importance=False, early_stopping_rounds=1000):
+              show_importance=False, early_stopping_rounds=None):
         if cv_generator:
             pred = None
         else:
@@ -317,7 +317,7 @@ class MachineLearningModel(object):
                           'learning_rate': 0.1,
                           'n_estimators': 100,
                           'silent': True,
-                          'objective': 'reg:linear',
+                          'objective': 'reg:logistic',  # 'reg:linear',
                           'booster': 'gbtree',
                           'n_jobs': -1,
                           'nthread': None,
