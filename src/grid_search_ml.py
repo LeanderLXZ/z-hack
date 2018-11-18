@@ -166,15 +166,15 @@ class GridSearch(object):
 if __name__ == '__main__':
 
     parameter_grid = [
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line',
-                        'a_ff', 'a_avg', 'a_line')],
-         ['model_name', ('knn', 'svm', 'dt', 'rf', 'et',
+        [['fill_mode', ['no', 'w_ff', 'w_avg', 'w_line',
+                        'a_ff', 'a_avg', 'a_line']],
+         ['model_name', ['knn', 'svm', 'dt', 'rf', 'et',
                          # 'ab', 'gb',
-                         'xgb', 'lgb')],
-         ['start_year', (2009, 2010, 2011, 2012)],
+                         'xgb', 'lgb']],
+         ['start_year', [2009, 2010, 2011, 2012]],
          ['valid_range', [('2013-12-02', '2013-12-31'),
                           ('2013-01-04', '2013-01-31')]],
-         ['feature_num', (21, 30, 50, 100)]]
+         ['feature_num', [21, 30, 50, 100]]]
     ]
 
     GS = GridSearch(sample_mode='day', select_col='CONTPRICE')
