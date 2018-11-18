@@ -46,31 +46,40 @@ class Training(object):
             valid_started = False
             valid_ended = False
             train_data = []
+            train_month = []
             valid_data = []
+            valid_month = []
             final_data = []
+            final_month = []
             for row_iter in self.data.iterrows():
                 row = row_iter[1]
                 date_str = row_iter[0].to_pydatetime().strftime('%Y-%m-%d')
+                month_str = row_iter[0].to_pydatetime().strftime('%m')
                 if date_str == train_start:
                     train_started = True
                 if train_started:
                     final_data.append(
                         row['{}_{}'.format(self.select_col, self.suffix)])
+                    final_month.append(month_str)
                 if date_str == valid_start:
                     valid_started = True
                 if train_started and not valid_started:
                     train_data.append(
                         row['{}_{}'.format(self.select_col, self.suffix)])
+                    train_month.append(month_str)
                 if valid_started and not valid_ended:
                     valid_data.append(
                         row['{}_{}'.format(self.select_col, self.suffix)])
+                    valid_month.append(month_str)
                 if date_str == valid_end:
                     valid_ended = True
             return np.array(train_data), np.array(valid_data), \
-                   np.array(final_data)
+                   np.array(final_data), train_month, valid_month, final_month
 
     @staticmethod
-    def series_to_features(series, feature_num):
+    def series_to_features(series, feature_num, month=None):
+        if month:
+            assert len(series) == len(month)
         features = []
         label = []
         pred_head = None
@@ -170,10 +179,11 @@ class Training(object):
               save_shifted_result=False,
               append_info=None):
 
-        x_train, y, x_final = self._train_valid_split(
-            train_start=data_range['train_start'],
-            valid_start=data_range['valid_start'],
-            valid_end=data_range['valid_end'])
+        x_train, y, x_final, train_m, valid_m, final_m = \
+            self._train_valid_split(
+                train_start=data_range['train_start'],
+                valid_start=data_range['valid_start'],
+                valid_end=data_range['valid_end'])
         # print(x_train)
         x_valid, y_valid, head_valid = \
             self.series_to_features(x_train, feature_num)
@@ -204,7 +214,7 @@ class Training(object):
 if __name__ == '__main__':
 
     start_time = time.time()
-    utils.check_dir([cfg.result_path])
+    utils.check_dir([cfg.log_path])
     df = pd.read_csv(join(cfg.source_path, 'z_hack_submit_new.csv'),
                      index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
     T = Training('day', 'CONTPRICE')
@@ -218,7 +228,7 @@ if __name__ == '__main__':
         utils.thin_line()
         print('Start Model: {}'.format(model_i))
         df['{}_day'.format(model_i)], _, _ = T.train(
-            model_i, feature_num=50, forecast_num=21,
+            model_i, feature_num=21, forecast_num=21,
             data_range=range_1, save_result=True)
         print('Model {} Done! Using time {:.2f}s...'.format(
             model_i, time.time() - model_start_time))

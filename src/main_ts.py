@@ -187,7 +187,7 @@ class Training(object):
 
 if __name__ == '__main__':
 
-    utils.check_dir([cfg.result_path])
+    utils.check_dir([cfg.log_path])
 
     df = pd.read_csv(join(cfg.source_path, 'z_hack_submit_new.csv'),
                      index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])

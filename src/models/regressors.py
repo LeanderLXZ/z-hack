@@ -148,7 +148,7 @@ class XGBoost(ModelBase):
         reg.fit(self.x, self.y,
                 eval_set=[(self.x, self.y)],
                 early_stopping_rounds=early_stopping_rounds,
-                eval_metric='mae', verbose=True)
+                eval_metric='mae', verbose=False)
         return reg
 
 
@@ -163,9 +163,8 @@ class LightGBM(ModelBase):
     def fit(self, parameters=None, early_stopping_rounds=1000):
         reg = self.get_reg(parameters)
         reg.fit(self.x, self.y,
-                eval_set=[(self.x, self.y)], eval_names=['train'],
                 early_stopping_rounds=early_stopping_rounds,
-                eval_metric='mae', verbose=True)
+                verbose=False)
         return reg
 
 
@@ -317,10 +316,9 @@ class MachineLearningModel(object):
                           'learning_rate': 0.1,
                           'n_estimators': 100,
                           'silent': True,
-                          'objective': 'reg:logistic',  # 'reg:linear',
+                          'objective': 'reg:linear',
                           'booster': 'gbtree',
                           'n_jobs': -1,
-                          'nthread': None,
                           'gamma': 0,
                           'min_child_weight': 1,
                           'max_delta_step': 0,
@@ -346,7 +344,6 @@ class MachineLearningModel(object):
                           'n_estimators': 100,
                           'subsample_for_bin': 200000,
                           'objective': 'regression',
-                          'class_weight': None,
                           'min_split_gain': 0.0,
                           'min_child_weight': 0.001,
                           'min_child_samples': 20,
@@ -357,8 +354,7 @@ class MachineLearningModel(object):
                           'reg_lambda': 0.0,
                           'random_state': train_seed,
                           'n_jobs': -1,
-                          'silent': True,
-                          'importance_type': 'split'}
+                          'silent': True}
             pred = LightGBM(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, early_stopping_rounds=None)
