@@ -329,8 +329,8 @@ if __name__ == '__main__':
             ['time_features', [(5, 10, 20, 30, 60)]],
             ['use_month_features', [True]],
 
-            ['learning_rate', [0.01, 0.05, 0.1, 0.3]],
-            ['n_estimators', [100, 500, 1000]],
+            ['learning_rate', [0.05, 0.1, 0.3]],
+            ['n_estimators', [100, 500]],
             ['max_depth', [4, 6, 8]],
             ['min_child_weight', [1, 3, 5]],
             ['subsample', [0.85, 0.90, 0.95]],
