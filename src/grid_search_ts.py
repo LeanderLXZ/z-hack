@@ -125,7 +125,7 @@ class GridSearch(object):
                     save_shifted_result=save_shifted_result,
                     append_info='_' + str(idx) + append_info)
 
-                utils.save_ts_log_to_csv(
+                utils.save_log_to_csv(
                     log_path=cfg.log_path,
                     grid_search_tuple_dict=grid_search_tuple_dict,
                     cost=cost,

@@ -216,6 +216,13 @@ class MachineLearningModel(object):
 
         train_seed = 95
 
+        if 'early_stopping_rounds' in model_parameters.keys():
+            early_stopping_rounds = \
+                model_parameters['early_stopping_rounds']
+            model_parameters.pop('early_stopping_rounds')
+        else:
+            early_stopping_rounds = None
+
         if model_name == 'knn':
             parameters ={'n_neighbors': 5,
                          'weights': 'uniform',
@@ -225,10 +232,15 @@ class MachineLearningModel(object):
                          'metric': 'minkowski',
                          'metric_params': None,
                          'n_jobs': -1}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = KNearestNeighbor(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'svm':
             parameters = {'kernel': 'rbf',
                           'degree': 3,
@@ -241,10 +253,15 @@ class MachineLearningModel(object):
                           'cache_size': 200,
                           'verbose': False,
                           'max_iter': -1}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = SupportVectorMachine(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'dt':
             parameters = {'criterion': 'mae',
                           'splitter': 'best',
@@ -258,10 +275,15 @@ class MachineLearningModel(object):
                           'min_impurity_decrease': 0.0,
                           'min_impurity_split': None,
                           'presort': False}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = DecisionTree(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'rf':
             parameters = {'bootstrap': True,
                           'criterion': 'mae',
@@ -278,10 +300,15 @@ class MachineLearningModel(object):
                           'random_state': train_seed,
                           'verbose': 0,
                           'warm_start': False}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = RandomForest(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'et':
             parameters = {'n_estimators': 10,
                           'criterion': 'mae',
@@ -299,10 +326,15 @@ class MachineLearningModel(object):
                           'random_state': train_seed,
                           'verbose': 0,
                           'warm_start': False}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = ExtraTrees(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'ab':
             et_parameters = {'n_estimators': 10,
                              'criterion': 'mae',
@@ -326,10 +358,15 @@ class MachineLearningModel(object):
                           'learning_rate': 1.0,
                           'n_estimators': 50,
                           'random_state': train_seed}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = AdaBoost(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'gb':
             parameters = {'loss': 'ls',
                           'learning_rate': 0.1,
@@ -350,44 +387,48 @@ class MachineLearningModel(object):
                           'max_leaf_nodes': None,
                           'warm_start': False,
                           'presort': 'auto'}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = GradientBoosting(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'xgb':
+            parameters = {'max_depth': 3,
+                          'learning_rate': 0.1,
+                          'n_estimators': 100,
+                          'silent': True,
+                          'objective': 'reg:linear',
+                          'booster': 'gbtree',
+                          'n_jobs': -1,
+                          'gamma': 0,
+                          'min_child_weight': 1,
+                          'max_delta_step': 0,
+                          'subsample': 1,
+                          'colsample_bytree': 1,
+                          'colsample_bylevel': 1,
+                          'reg_alpha': 0,
+                          'reg_lambda': 1,
+                          'scale_pos_weight': 1,
+                          'base_score': 0.5,
+                          'random_state': train_seed,
+                          'seed': train_seed,
+                          'missing': None,
+                          'importance_type': 'gain'}
             if model_parameters:
-                parameters = model_parameters['params']
-                early_stopping_rounds = \
-                    model_parameters['early_stopping_rounds']
-            else:
-                parameters = {'max_depth': 3,
-                              'learning_rate': 0.1,
-                              'n_estimators': 100,
-                              'silent': True,
-                              'objective': 'reg:linear',
-                              'booster': 'gbtree',
-                              'n_jobs': -1,
-                              'gamma': 0,
-                              'min_child_weight': 1,
-                              'max_delta_step': 0,
-                              'subsample': 1,
-                              'colsample_bytree': 1,
-                              'colsample_bylevel': 1,
-                              'reg_alpha': 0,
-                              'reg_lambda': 1,
-                              'scale_pos_weight': 1,
-                              'base_score': 0.5,
-                              'random_state': train_seed,
-                              'seed': train_seed,
-                              'missing': None,
-                              'importance_type': 'gain'}
-                early_stopping_rounds = None
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = XGBoost(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
                 parameters,
                 early_stopping_rounds=early_stopping_rounds,
                 time_features=time_features,
                 use_month_features=use_month_features)
+
         elif model_name == 'lgb':
             parameters = {'boosting_type': 'gbdt',
                           'num_leaves': 31,
@@ -407,11 +448,16 @@ class MachineLearningModel(object):
                           'random_state': train_seed,
                           'n_jobs': -1,
                           'silent': True}
+            if model_parameters:
+                for model_param in model_parameters.keys():
+                    parameters[model_param] = \
+                        model_parameters[model_param]
             pred = LightGBM(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
-                parameters, early_stopping_rounds=None,
+                parameters, early_stopping_rounds=early_stopping_rounds,
                 time_features=time_features,
                 use_month_features=use_month_features)
+
         else:
             raise Exception("Wrong Model Name!")
 

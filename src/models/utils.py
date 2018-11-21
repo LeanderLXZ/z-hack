@@ -1257,125 +1257,24 @@ def get_suffix(sample_mode):
 
 
 # Save Log to csv File
-def save_ts_log_to_csv(log_path, grid_search_tuple_dict,
-                       cost, idx, append_info=''):
+def save_log_to_csv(log_path, grid_search_tuple_dict: dict,
+                    cost, idx, append_info=''):
     check_dir([log_path])
-    model_name = grid_search_tuple_dict['model_name']
-    start_year = grid_search_tuple_dict['start_year']
-    valid_range = grid_search_tuple_dict['valid_range']
-    frequency = grid_search_tuple_dict['frequency']
-    hw_seasonal = grid_search_tuple_dict['hw_seasonal']
-    fill_mode = grid_search_tuple_dict['fill_mode']
+    param_name_list = []
+    param_value_list = []
+    for name in grid_search_tuple_dict.keys():
+        param_name_list.append(name)
+        param_value_list.append(grid_search_tuple_dict[name])
     file_path = os.path.join(log_path, 'cost_log{}.csv'.format(append_info))
 
     if not os.path.isfile(file_path):
         with open(file_path, 'w') as f:
-            header = ['idx', 'model_name', 'start_year', 'valid_range',
-                      'frequency', 'hw_seasonal', 'fill_mode', 'cost']
+            header = ['idx', *param_name_list, 'cost']
             writer = csv.writer(f)
             writer.writerow(header)
 
     with open(file_path, 'a') as f:
-        log = [idx, model_name, start_year, valid_range,
-               frequency, hw_seasonal, fill_mode, cost]
-        writer = csv.writer(f)
-        writer.writerow(log)
-
-
-# Save Log to csv File
-def save_ml_log_to_csv(log_path, grid_search_tuple_dict,
-                       cost, idx, append_info=''):
-    check_dir([log_path])
-    model_name = grid_search_tuple_dict['model_name']
-    start_year = grid_search_tuple_dict['start_year']
-    valid_range = grid_search_tuple_dict['valid_range']
-    feature_num = grid_search_tuple_dict['feature_num']
-    fill_mode = grid_search_tuple_dict['fill_mode']
-    time_features = grid_search_tuple_dict['time_features']
-    use_month_features = grid_search_tuple_dict['use_month_features']
-    file_path = os.path.join(log_path, 'cost_log{}.csv'.format(append_info))
-
-    if not os.path.isfile(file_path):
-        with open(file_path, 'w') as f:
-            header = ['idx', 'model_name', 'start_year', 'valid_range',
-                      'feature_num', 'fill_mode', 'time_features',
-                      'use_month_features', 'cost']
-            writer = csv.writer(f)
-            writer.writerow(header)
-
-    with open(file_path, 'a') as f:
-        log = [idx, model_name, start_year, valid_range,
-               feature_num, fill_mode, time_features,
-               use_month_features, cost]
-        writer = csv.writer(f)
-        writer.writerow(log)
-
-
-# Save Log to csv File
-def save_xgb_log_to_csv(log_path, grid_search_tuple_dict,
-                        cost, idx, append_info=''):
-    check_dir([log_path])
-    model_name = grid_search_tuple_dict['model_name']
-    start_year = grid_search_tuple_dict['start_year']
-    valid_range = grid_search_tuple_dict['valid_range']
-    feature_num = grid_search_tuple_dict['feature_num']
-    fill_mode = grid_search_tuple_dict['fill_mode']
-    time_features = grid_search_tuple_dict['time_features']
-    use_month_features = grid_search_tuple_dict['use_month_features']
-    learning_rate = grid_search_tuple_dict['learning_rate']
-    n_estimators = grid_search_tuple_dict['n_estimators']
-    max_depth = grid_search_tuple_dict['max_depth']
-    min_child_weight = grid_search_tuple_dict['min_child_weight']
-    subsample = grid_search_tuple_dict['subsample']
-    colsample_bytree = grid_search_tuple_dict['colsample_bytree']
-    colsample_bylevel = grid_search_tuple_dict['colsample_bylevel']
-    early_stopping_rounds = grid_search_tuple_dict['early_stopping_rounds']
-    file_path = os.path.join(log_path, 'cost_log{}.csv'.format(append_info))
-
-    if not os.path.isfile(file_path):
-        with open(file_path, 'w') as f:
-            header = [
-                'idx',
-                'model_name',
-                'start_year',
-                'valid_range',
-                'feature_num',
-                'fill_mode',
-                'time_features',
-                'use_month_features',
-                'xgb_learning_rate',
-                'xgb_n_estimators',
-                'xgb_max_depth',
-                'xgb_min_child_weight',
-                'xgb_subsample',
-                'xgb_colsample_bytree',
-                'xgb_colsample_bylevel',
-                'xgb_early_stopping_rounds',
-                'cost'
-            ]
-            writer = csv.writer(f)
-            writer.writerow(header)
-
-    with open(file_path, 'a') as f:
-        log = [
-            idx,
-            model_name,
-            start_year,
-            valid_range,
-            feature_num,
-            fill_mode,
-            time_features,
-            use_month_features,
-            learning_rate,
-            n_estimators,
-            max_depth,
-            min_child_weight,
-            subsample,
-            colsample_bytree,
-            colsample_bylevel,
-            early_stopping_rounds,
-            cost
-        ]
+        log = [idx, *param_value_list, cost]
         writer = csv.writer(f)
         writer.writerow(log)
 
