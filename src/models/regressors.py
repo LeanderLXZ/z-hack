@@ -211,7 +211,8 @@ class MachineLearningModel(object):
     def predict(self,
                 model_name,
                 time_features=None,
-                use_month_features=False):
+                use_month_features=False,
+                model_parameters=None):
 
         train_seed = 95
 
@@ -354,30 +355,37 @@ class MachineLearningModel(object):
                 parameters, time_features=time_features,
                 use_month_features=use_month_features)
         elif model_name == 'xgb':
-            parameters = {'max_depth': 3,
-                          'learning_rate': 0.1,
-                          'n_estimators': 100,
-                          'silent': True,
-                          'objective': 'reg:linear',
-                          'booster': 'gbtree',
-                          'n_jobs': -1,
-                          'gamma': 0,
-                          'min_child_weight': 1,
-                          'max_delta_step': 0,
-                          'subsample': 1,
-                          'colsample_bytree': 1,
-                          'colsample_bylevel': 1,
-                          'reg_alpha': 0,
-                          'reg_lambda': 1,
-                          'scale_pos_weight': 1,
-                          'base_score': 0.5,
-                          'random_state': train_seed,
-                          'seed': train_seed,
-                          'missing': None,
-                          'importance_type': 'gain'}
+            if model_parameters:
+                parameters = model_parameters['params']
+                early_stopping_rounds = \
+                    model_parameters['early_stopping_rounds']
+            else:
+                parameters = {'max_depth': 3,
+                              'learning_rate': 0.1,
+                              'n_estimators': 100,
+                              'silent': True,
+                              'objective': 'reg:linear',
+                              'booster': 'gbtree',
+                              'n_jobs': -1,
+                              'gamma': 0,
+                              'min_child_weight': 1,
+                              'max_delta_step': 0,
+                              'subsample': 1,
+                              'colsample_bytree': 1,
+                              'colsample_bylevel': 1,
+                              'reg_alpha': 0,
+                              'reg_lambda': 1,
+                              'scale_pos_weight': 1,
+                              'base_score': 0.5,
+                              'random_state': train_seed,
+                              'seed': train_seed,
+                              'missing': None,
+                              'importance_type': 'gain'}
+                early_stopping_rounds = None
             pred = XGBoost(
                 self.x, self.y, self.pred_head, self.forecast_num).train(
-                parameters, early_stopping_rounds=None,
+                parameters,
+                early_stopping_rounds=early_stopping_rounds,
                 time_features=time_features,
                 use_month_features=use_month_features)
         elif model_name == 'lgb':

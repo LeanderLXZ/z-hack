@@ -157,6 +157,7 @@ class Training(object):
                             y_final,
                             head_final,
                             time_features=None,
+                            parameters=None,
                             use_month_features=False,
                             append_info=None):
 
@@ -168,7 +169,8 @@ class Training(object):
             ).predict(
                 model_name,
                 time_features=time_features,
-                use_month_features=use_month_features
+                use_month_features=use_month_features,
+                model_parameters=parameters
             )
             df_pred_sf = pd.read_csv(
                 join(cfg.source_path, 'z_hack_submit_new_day_work.csv'),
@@ -181,7 +183,8 @@ class Training(object):
             ).predict(
                 model_name,
                 time_features=time_features,
-                use_month_features=use_month_features
+                use_month_features=use_month_features,
+                model_parameters=parameters
             )
             df_pred_sf = pd.read_csv(
                 join(cfg.source_path, 'z_hack_submit_new_day_all.csv'),
@@ -214,6 +217,7 @@ class Training(object):
 
     def train(self,
               model_name,
+              parameters=None,
               feature_num=50,
               forecast_num=21,
               time_features=None,
@@ -251,7 +255,8 @@ class Training(object):
         ).predict(
             model_name,
             time_features=time_features,
-            use_month_features=use_month_features
+            use_month_features=use_month_features,
+            model_parameters=parameters
         )
         pred_final = MachineLearningModel(
             final_features, final_labels, final_head,
@@ -259,7 +264,8 @@ class Training(object):
         ).predict(
             model_name,
             time_features=time_features,
-            use_month_features=use_month_features
+            use_month_features=use_month_features,
+            model_parameters=parameters
         )
         cost = self._calc_acc(valid_labels, pred_valid)
 
@@ -267,6 +273,7 @@ class Training(object):
         if (self.fill_mode is not None) and save_shifted_result:
             self.get_shifted_results(
                 model_name, final_features, final_labels, final_head,
+                parameters=parameters,
                 time_features=time_features,
                 use_month_features=use_month_features,
                 append_info=append_info)
