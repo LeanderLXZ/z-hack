@@ -36,65 +36,93 @@ class Training(object):
                 parse_dates=['DATE'])
             # print(self.data)
 
-    def _train_valid_split(self,
+        self.month_features = utils.get_month_features()
+
+    @staticmethod
+    def _train_valid_split(features,
+                           labels,
+                           final_head,
+                           date_list,
                            train_start,
                            valid_start,
                            valid_end):
+        if train_start not in date_list:
+            train_start = date_list[0]
+        train_started = False
+        valid_started = False
+        valid_ended = False
+        train_features = []
+        train_labels = []
+        valid_head = None
+        valid_labels = []
+        final_features = []
+        final_labels = []
+        for idx, date in enumerate(date_list):
+            if date == train_start:
+                train_started = True
+            if train_started:
+                final_features.append(features[idx])
+                final_labels.append(labels[idx])
+            if date == valid_start:
+                valid_head = features[idx]
+                valid_started = True
+            if train_started and not valid_started:
+                train_features.append(features[idx])
+                train_labels.append(labels[idx])
+            if valid_started and not valid_ended:
+                valid_labels.append(labels[idx])
+            if date == valid_end:
+                valid_ended = True
+            if idx == len(date_list) - 1:
+                assert labels[idx] == final_head[-1]
+        return np.array(train_features), np.array(train_labels), \
+               np.array(valid_head), np.array(valid_labels),\
+               np.array(final_features), np.array(final_labels)
 
-        if self.sample_mode == 'day':
-            train_started = False
-            valid_started = False
-            valid_ended = False
-            train_data = []
-            train_month = []
-            valid_data = []
-            valid_month = []
-            final_data = []
-            final_month = []
-            for row_iter in self.data.iterrows():
-                row = row_iter[1]
-                date_str = row_iter[0].to_pydatetime().strftime('%Y-%m-%d')
-                month_str = row_iter[0].to_pydatetime().strftime('%m')
-                if date_str == train_start:
-                    train_started = True
-                if train_started:
-                    final_data.append(
-                        row['{}_{}'.format(self.select_col, self.suffix)])
-                    final_month.append(month_str)
-                if date_str == valid_start:
-                    valid_started = True
-                if train_started and not valid_started:
-                    train_data.append(
-                        row['{}_{}'.format(self.select_col, self.suffix)])
-                    train_month.append(month_str)
-                if valid_started and not valid_ended:
-                    valid_data.append(
-                        row['{}_{}'.format(self.select_col, self.suffix)])
-                    valid_month.append(month_str)
-                if date_str == valid_end:
-                    valid_ended = True
-            return np.array(train_data), np.array(valid_data), \
-                   np.array(final_data), train_month, valid_month, final_month
-
-    @staticmethod
-    def series_to_features(series, feature_num, month=None):
-        if month:
-            assert len(series) == len(month)
+    def series_to_features(self,
+                           feature_num,
+                           month_features=None,
+                           time_features=None):
+        series = self.data[
+            '{}_{}'.format(self.select_col, self.suffix)].values
+        date = list(map(lambda x: x.strftime('%Y-%m-%d'),
+                        self.data.index.to_pydatetime()))
         features = []
-        label = []
+        labels = []
+        date_list = []
         pred_head = None
-        idx_start = 0
-        idx_end = feature_num
-        while (idx_end + 1) < len(series):
-            features.append(series[idx_start:idx_end])
-            label.append(series[idx_end + 1])
-            idx_start += 1
-            idx_end += 1
-            if idx_end == len(series) - 1:
-                pred_head = [series[idx_start:idx_end]]
-        assert len(features[0]) == feature_num
-        assert len(pred_head[0]) == feature_num
-        return np.array(features), np.array(label), np.array(pred_head)
+        feature_idx_start = 0
+        feature_idx_end = np.max((feature_num, np.max(time_features)))
+        while feature_idx_end < len(series):
+            feature = []
+            date_list.append(date[feature_idx_end])
+            for f_i, feature_num_i in enumerate(time_features):
+                feature.append(np.mean(
+                    series[feature_idx_end-feature_num_i:feature_idx_end]))
+            feature = np.append(
+                feature, series[feature_idx_start:feature_idx_end])
+            if month_features:
+                month = self.data.index[feature_idx_end]
+                month_str = month.to_pydatetime().strftime('%Y-%m')
+                feature = np.append(
+                    month_features['pre'][month_str], feature)
+            features.append(feature)
+            labels.append(series[feature_idx_end])
+            if feature_idx_end == len(series) - 1:
+                feature = []
+                for f_i, feature_num_i in enumerate(time_features):
+                    feature.append(np.mean(labels[-feature_num_i:]))
+                pred_head = np.append(
+                    feature, series[feature_idx_start+1:feature_idx_end+1])
+                if month_features:
+                    month = self.data.index[feature_idx_end]
+                    month_str = month.to_pydatetime().strftime('%Y-%m')
+                    pred_head = np.append(
+                        month_features['now'][month_str], pred_head)
+            feature_idx_start += 1
+            feature_idx_end += 1
+        return np.array(features), np.array(labels), \
+               np.array(pred_head), date_list
 
     @staticmethod
     def _calc_acc(y, pred):
@@ -128,23 +156,37 @@ class Training(object):
                             x_final,
                             y_final,
                             head_final,
+                            time_features=None,
+                            use_month_features=False,
                             append_info=None):
 
         # Get predictions for different lengths for different fill modes
         if self.fill_mode in ['w_ff', 'w_bf', 'w_avg', 'w_line']:
             pred_final_sf = MachineLearningModel(
                 x_final, y_final, head_final,
-                forecast_num=22).predict(model_name)
+                forecast_num=22
+            ).predict(
+                model_name,
+                time_features=time_features,
+                use_month_features=use_month_features
+            )
             df_pred_sf = pd.read_csv(
                 join(cfg.source_path, 'z_hack_submit_new_day_work.csv'),
-                index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+                index_col=['FORECASTDATE'], usecols=['FORECASTDATE']
+            )
         elif self.fill_mode in ['a_ff', 'a_bf', 'a_avg', 'a_line']:
             pred_final_sf = MachineLearningModel(
                 x_final, y_final, head_final,
-                forecast_num=30).predict(model_name)
+                forecast_num=30
+            ).predict(
+                model_name,
+                time_features=time_features,
+                use_month_features=use_month_features
+            )
             df_pred_sf = pd.read_csv(
                 join(cfg.source_path, 'z_hack_submit_new_day_all.csv'),
-                index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+                index_col=['FORECASTDATE'], usecols=['FORECASTDATE']
+            )
         else:
             raise ValueError('Wrong Fill Mode! Find: {}'.format(self.fill_mode))
 
@@ -174,35 +216,60 @@ class Training(object):
               model_name,
               feature_num=50,
               forecast_num=21,
+              time_features=None,
+              use_month_features=False,
               data_range=None,
               save_result=False,
               save_shifted_result=False,
               append_info=None):
 
-        x_train, y, x_final, train_m, valid_m, final_m = \
+        if use_month_features:
+            month_features = self.month_features
+        else:
+            month_features = None
+
+        features, labels, final_head, date_list = \
+            self.series_to_features(
+                feature_num,
+                month_features=month_features,
+                time_features=time_features
+            )
+        train_features, train_labels, valid_head, \
+            valid_labels, final_features, final_labels = \
             self._train_valid_split(
+                features, labels, final_head, date_list,
                 train_start=data_range['train_start'],
                 valid_start=data_range['valid_start'],
-                valid_end=data_range['valid_end'])
-        # print(x_train)
-        x_valid, y_valid, head_valid = \
-            self.series_to_features(x_train, feature_num)
-        # print(x_valid, y_valid, head_valid)
+                valid_end=data_range['valid_end']
+            )
+        # print(train_features[0])
+        # print(train_features, train_labels, valid_head,
+        #       valid_labels, final_features, final_labels)
         pred_valid = MachineLearningModel(
-            x_valid, y_valid, head_valid,
-            forecast_num=len(y)).predict(model_name)
-        x_final, y_final, head_final = \
-            self.series_to_features(x_final, feature_num)
-        # print(x_final, y_final, head_final)
+            train_features, train_labels, valid_head,
+            forecast_num=len(valid_labels)
+        ).predict(
+            model_name,
+            time_features=time_features,
+            use_month_features=use_month_features
+        )
         pred_final = MachineLearningModel(
-            x_final, y_final, head_final,
-            forecast_num=forecast_num).predict(model_name)
-        cost = self._calc_acc(y, pred_valid)
+            final_features, final_labels, final_head,
+            forecast_num=forecast_num
+        ).predict(
+            model_name,
+            time_features=time_features,
+            use_month_features=use_month_features
+        )
+        cost = self._calc_acc(valid_labels, pred_valid)
 
         # Save shifted results for different fill modes
         if (self.fill_mode is not None) and save_shifted_result:
             self.get_shifted_results(
-                model_name, x_final, y_final, head_final, append_info)
+                model_name, final_features, final_labels, final_head,
+                time_features=time_features,
+                use_month_features=use_month_features,
+                append_info=append_info)
 
         # Save final results
         if save_result:
@@ -228,8 +295,14 @@ if __name__ == '__main__':
         utils.thin_line()
         print('Start Model: {}'.format(model_i))
         df['{}_day'.format(model_i)], _, _ = T.train(
-            model_i, feature_num=21, forecast_num=21,
-            data_range=range_1, save_result=True)
+            model_i,
+            feature_num=21,
+            forecast_num=21,
+            time_features=(10, 20, 30, 40, 50),
+            use_month_features=True,
+            data_range=range_1,
+            save_result=True
+        )
         print('Model {} Done! Using time {:.2f}s...'.format(
             model_i, time.time() - model_start_time))
 

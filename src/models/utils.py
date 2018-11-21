@@ -1291,17 +1291,37 @@ def save_ml_log_to_csv(log_path, grid_search_tuple_dict,
     valid_range = grid_search_tuple_dict['valid_range']
     feature_num = grid_search_tuple_dict['feature_num']
     fill_mode = grid_search_tuple_dict['fill_mode']
+    time_features = grid_search_tuple_dict['time_features']
+    use_month_features = grid_search_tuple_dict['use_month_features']
     file_path = os.path.join(log_path, 'cost_log{}.csv'.format(append_info))
 
     if not os.path.isfile(file_path):
         with open(file_path, 'w') as f:
             header = ['idx', 'model_name', 'start_year', 'valid_range',
-                      'feature_num', 'fill_mode', 'cost']
+                      'feature_num', 'fill_mode', 'time_features',
+                      'use_month_features', 'cost']
             writer = csv.writer(f)
             writer.writerow(header)
 
     with open(file_path, 'a') as f:
         log = [idx, model_name, start_year, valid_range,
-               feature_num, fill_mode, cost]
+               feature_num, fill_mode, time_features,
+               use_month_features, cost]
         writer = csv.writer(f)
         writer.writerow(log)
+
+
+def get_month_features():
+    df = pd.read_csv(os.path.join(cfg.preprocessed_path, 'total_month.csv'))
+    months = []
+    prices = []
+    for row_i in df.iterrows():
+        row = row_i[1]
+        months.append(
+            str(int(row['YEAR'])) + '-{0:02d}'.format(int(row['MONTH'])))
+        prices.append(row['CONTPRICE_MONTH'])
+    dict_now = {month: price for month, price in zip(months, prices)}
+    dict_pre = {}
+    for i in range(1, len(months)):
+        dict_pre[months[i]] = prices[i-1]
+    return {'now': dict_now, 'pre': dict_pre}
