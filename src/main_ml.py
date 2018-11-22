@@ -91,8 +91,11 @@ class Training(object):
         labels = []
         date_list = []
         pred_head = None
-        feature_idx_start = 0
         feature_idx_end = np.max((feature_num, np.max(time_features)))
+        if month_features:
+            feature_idx_end = np.max((feature_idx_end, 31))
+        feature_idx_start = feature_idx_end - feature_num
+
         while feature_idx_end < len(series):
             feature = []
             date_list.append(date[feature_idx_end])
@@ -156,10 +159,12 @@ class Training(object):
                             x_final,
                             y_final,
                             head_final,
+                            forecast_num,
                             time_features=None,
                             model_parameters=None,
                             use_month_features=False,
-                            append_info=None):
+                            append_info='',
+                            idx=None):
 
         # Get predictions for different lengths for different fill modes
         if self.fill_mode in ['w_ff', 'w_bf', 'w_avg', 'w_line']:
@@ -170,7 +175,9 @@ class Training(object):
                 model_name,
                 time_features=time_features,
                 use_month_features=use_month_features,
-                model_parameters=model_parameters
+                model_parameters=model_parameters,
+                idx=idx,
+                mode='train'
             )
             df_pred_sf = pd.read_csv(
                 join(cfg.source_path, 'z_hack_submit_new_day_work.csv'),
@@ -184,7 +191,9 @@ class Training(object):
                 model_name,
                 time_features=time_features,
                 use_month_features=use_month_features,
-                model_parameters=model_parameters
+                model_parameters=model_parameters,
+                idx=idx,
+                mode='train'
             )
             df_pred_sf = pd.read_csv(
                 join(cfg.source_path, 'z_hack_submit_new_day_all.csv'),
@@ -192,6 +201,8 @@ class Training(object):
             )
         else:
             raise ValueError('Wrong Fill Mode! Find: {}'.format(self.fill_mode))
+
+        pred_final = pred_final_sf[:forecast_num]
 
         # Assign prediction to DataFrame
         assert len(df_pred_sf) == len(pred_final_sf), \
@@ -213,6 +224,7 @@ class Training(object):
         df_pred_sf.to_csv(join(
             shifted_result_path, 'result_sf{}.csv'.format(append_info)),
             float_format='%.2f')
+        return pred_final, pred_final_sf
 
 
     def train(self,
@@ -225,7 +237,8 @@ class Training(object):
               data_range=None,
               save_result=False,
               save_shifted_result=False,
-              append_info=None):
+              append_info='',
+              idx=None):
 
         if use_month_features:
             month_features = self.month_features
@@ -246,9 +259,11 @@ class Training(object):
                 valid_start=data_range['valid_start'],
                 valid_end=data_range['valid_end']
             )
-        # print(train_features[0])
-        # print(train_features, train_labels, valid_head,
-        #       valid_labels, final_features, final_labels)
+        # print(train_features, '\n',
+        #       train_labels, '\n',
+        #       valid_head, '\n',
+        #       valid_labels, '\n',
+        #       final_head, '\n')
         pred_valid = MachineLearningModel(
             train_features, train_labels, valid_head,
             forecast_num=len(valid_labels)
@@ -256,33 +271,42 @@ class Training(object):
             model_name,
             time_features=time_features,
             use_month_features=use_month_features,
-            model_parameters=model_parameters
-        )
-        pred_final = MachineLearningModel(
-            final_features, final_labels, final_head,
-            forecast_num=forecast_num
-        ).predict(
-            model_name,
-            time_features=time_features,
-            use_month_features=use_month_features,
-            model_parameters=model_parameters
+            model_parameters=model_parameters,
+            idx=idx,
+            mode='valid'
         )
         cost = self._calc_acc(valid_labels, pred_valid)
 
         # Save shifted results for different fill modes
         if (self.fill_mode is not None) and save_shifted_result:
-            self.get_shifted_results(
+            pred_final, pred_final_sf = self.get_shifted_results(
                 model_name, final_features, final_labels, final_head,
+                forecast_num=forecast_num,
                 model_parameters=model_parameters,
                 time_features=time_features,
                 use_month_features=use_month_features,
-                append_info=append_info)
+                append_info=append_info,
+                idx=idx
+            )
+        else:
+            pred_final = MachineLearningModel(
+                final_features, final_labels, final_head,
+                forecast_num=forecast_num
+            ).predict(
+                model_name,
+                time_features=time_features,
+                use_month_features=use_month_features,
+                model_parameters=model_parameters,
+                idx=idx,
+                mode='train'
+            )
+            pred_final_sf = np.zeros_like(pred_final)
 
         # Save final results
         if save_result:
             self.save_result(pred_final, model_name, append_info)
 
-        return pred_final, cost, pred_valid
+        return pred_final, pred_final_sf, cost, pred_valid
 
 
 if __name__ == '__main__':
@@ -291,24 +315,39 @@ if __name__ == '__main__':
     utils.check_dir([cfg.log_path])
     df = pd.read_csv(join(cfg.source_path, 'z_hack_submit_new.csv'),
                      index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
-    T = Training('day', 'CONTPRICE')
-    range_1 = {'train_start': '2009-01-04',
+    T = Training('day', 'CONTPRICE', fill_mode='a_avg')
+    range_1 = {'train_start': '2009-01-05',
                'valid_start': '2013-12-02',
                'valid_end': '2013-12-31'}
+    model_parameters_1 = {
+        'learning_rate': 0.1,
+        'n_estimators': 500,
+        'max_depth': 8,
+        'min_child_weight': 3,
+        'subsample': 0.85,
+        'colsample_bytree': 0.95,
+        'colsample_bylevel': 0.8,
+        'early_stopping_rounds': None
+    }
 
-    for model_i in ('knn', 'svm', 'dt', 'rf',
-                    'et', 'ab', 'gb', 'xgb', 'lgb'):
+    for model_i in (
+        # 'knn', 'svm', 'dt', 'rf', 'et', 'ab', 'gb',
+        'xgb',
+        #  'lgb'
+        ):
         model_start_time = time.time()
         utils.thin_line()
         print('Start Model: {}'.format(model_i))
-        df['{}_day'.format(model_i)], _, _ = T.train(
+        df['{}_day'.format(model_i)], _, _, _ = T.train(
             model_i,
+            model_parameters= model_parameters_1,
             feature_num=21,
             forecast_num=21,
-            time_features=(10, 20, 30, 40, 50),
+            time_features=(5, 10, 20),
             use_month_features=True,
             data_range=range_1,
-            save_result=True
+            save_result=True,
+            save_shifted_result=True
         )
         print('Model {} Done! Using time {:.2f}s...'.format(
             model_i, time.time() - model_start_time))

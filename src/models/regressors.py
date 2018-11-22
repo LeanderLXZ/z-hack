@@ -1,4 +1,5 @@
 import numpy as np
+from models import utils
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
@@ -16,11 +17,13 @@ class ModelBase(object):
     """
         Base Model Class of Models in scikit-learn Module
     """
-    def __init__(self, x, y, pred_head, forecast_num):
+    def __init__(self, x, y, pred_head, forecast_num, idx=None, mode=None):
         self.x = x
         self.y = y
         self.pred_head = pred_head
         self.forecast_num = forecast_num
+        self.idx = idx
+        self.mode = mode
 
     @staticmethod
     def get_reg(parameters):
@@ -69,40 +72,51 @@ class ModelBase(object):
                 head[n_tf+1:-1], head[-1] = head[n_tf+2:], pred_i
             else:
                 head[n_tf:-1], head[-1] = head[n_tf+1:], pred_i
+            # print(i, pred_i, '\n', head)
         return np.array(pred_list)
 
-    @staticmethod
-    def get_importance(reg):
-        print('------------------------------------------------------')
-        print('Feature Importance')
+    def get_importance(self, reg):
+        # # print('------------------------------------------------------')
+        # # print('Feature Importance')
+        # importance = reg.feature_importances_
+        # indices = np.argsort(importance)[::-1]
+        # feature_num = len(importance)
+        # for f in range(feature_num):
+        #     print("%d | feature %d | %d" % (
+        #         f + 1, indices[f], importance[indices[f]]))
+
         importance = reg.feature_importances_
         indices = np.argsort(importance)[::-1]
         feature_num = len(importance)
+        features_list = []
+        importance_list = []
         for f in range(feature_num):
-            print("%d | feature %d | %d" % (
-                f + 1, indices[f], importance[indices[f]]))
+            if importance[indices[f]] != 0:
+                features_list.append('feature_{}'.format(indices[f]))
+                importance_list.append(importance[indices[f]])
+
+        utils.save_importance(self.mode,
+                              self.idx,
+                              features_list,
+                              importance_list)
 
     def train(self,
               parameters=None,
-              cv_generator=None,
-              show_importance=False,
               time_features=None,
               use_month_features=False,
               early_stopping_rounds=None):
-        if cv_generator:
-            pred = None
-        else:
-            # Fitting and Training Model
-            reg = self.fit(parameters,
-                           early_stopping_rounds=early_stopping_rounds)
-            # Feature Importance
-            if show_importance:
-                self.get_importance(reg)
-            # Predicting
-            pred = self.predict(
-                reg, self.pred_head, self.forecast_num,
-                use_month_features=use_month_features,
-                time_features=time_features)
+
+        # Fitting and Training Model
+        reg = self.fit(parameters,
+                       early_stopping_rounds=early_stopping_rounds)
+        # Feature Importance
+        self.get_importance(reg)
+        # Predicting
+        pred = self.predict(
+            reg, self.pred_head, self.forecast_num,
+            use_month_features=use_month_features,
+            time_features=time_features)
+
         return pred
 
 
@@ -212,16 +226,18 @@ class MachineLearningModel(object):
                 model_name,
                 time_features=None,
                 use_month_features=False,
-                model_parameters=None):
+                model_parameters=None,
+                idx=None,
+                mode=None):
 
         train_seed = 95
+        early_stopping_rounds = None
 
-        if 'early_stopping_rounds' in model_parameters.keys():
-            early_stopping_rounds = \
-                model_parameters['early_stopping_rounds']
-            model_parameters.pop('early_stopping_rounds')
-        else:
-            early_stopping_rounds = None
+        if model_parameters:
+            if 'early_stopping_rounds' in model_parameters.keys():
+                early_stopping_rounds = \
+                    model_parameters['early_stopping_rounds']
+                model_parameters.pop('early_stopping_rounds')
 
         if model_name == 'knn':
             parameters ={'n_neighbors': 5,
@@ -237,9 +253,12 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = KNearestNeighbor(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
                 parameters, time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'svm':
             parameters = {'kernel': 'rbf',
@@ -258,9 +277,12 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = SupportVectorMachine(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
                 parameters, time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'dt':
             parameters = {'criterion': 'mae',
@@ -280,9 +302,12 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = DecisionTree(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
                 parameters, time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'rf':
             parameters = {'bootstrap': True,
@@ -305,9 +330,12 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = RandomForest(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
                 parameters, time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'et':
             parameters = {'n_estimators': 10,
@@ -331,9 +359,12 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = ExtraTrees(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
                 parameters, time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'ab':
             et_parameters = {'n_estimators': 10,
@@ -363,9 +394,12 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = AdaBoost(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
                 parameters, time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'gb':
             parameters = {'loss': 'ls',
@@ -392,9 +426,12 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = GradientBoosting(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
                 parameters, time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'xgb':
             parameters = {'max_depth': 3,
@@ -423,11 +460,13 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = XGBoost(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
-                parameters,
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
+                parameters, time_features=time_features,
                 early_stopping_rounds=early_stopping_rounds,
-                time_features=time_features,
-                use_month_features=use_month_features)
+                use_month_features=use_month_features
+            )
 
         elif model_name == 'lgb':
             parameters = {'boosting_type': 'gbdt',
@@ -453,10 +492,13 @@ class MachineLearningModel(object):
                     parameters[model_param] = \
                         model_parameters[model_param]
             pred = LightGBM(
-                self.x, self.y, self.pred_head, self.forecast_num).train(
-                parameters, early_stopping_rounds=early_stopping_rounds,
-                time_features=time_features,
-                use_month_features=use_month_features)
+                self.x, self.y, self.pred_head,
+                self.forecast_num, idx=idx, mode=mode
+            ).train(
+                parameters, time_features=time_features,
+                early_stopping_rounds=early_stopping_rounds,
+                use_month_features=use_month_features
+            )
 
         else:
             raise Exception("Wrong Model Name!")

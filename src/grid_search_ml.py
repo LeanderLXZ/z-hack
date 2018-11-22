@@ -126,7 +126,9 @@ class GridSearch(object):
                     data_range=data_range,
                     save_result=save_every_result,
                     save_shifted_result=save_shifted_result,
-                    append_info='_' + str(idx) + append_info)
+                    append_info='_' + str(idx) + append_info,
+                    idx=idx
+                )
 
                 utils.save_log_to_csv(
                     log_path=cfg.log_path,
@@ -178,6 +180,7 @@ class GridSearch(object):
         df_total = pd.read_csv(
             join(cfg.source_path, 'z_hack_submit_new_with_cost.csv'),
             index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
+        df_total_sf = df_total.copy()
         forecast_num = len(df_total) - 1
 
         df_valid = pd.DataFrame(index=range(35))
@@ -222,7 +225,7 @@ class GridSearch(object):
                     model_parameters[model_param] = \
                         grid_search_tuple_dict[model_param]
 
-                pred_final, cost, pred_valid = self.T[fill_mode].train(
+                pred_final, pred_final_sf, cost, pred_valid = self.T[fill_mode].train(
                     model_name=model_name,
                     model_parameters=model_parameters,
                     feature_num=feature_num,
@@ -232,7 +235,8 @@ class GridSearch(object):
                     data_range=data_range,
                     save_result=save_every_result,
                     save_shifted_result=save_shifted_result,
-                    append_info='_' + str(idx) + append_info)
+                    append_info='_' + str(idx) + append_info,
+                    idx=idx)
 
                 utils.save_log_to_csv(
                     log_path=cfg.log_path,
@@ -243,6 +247,10 @@ class GridSearch(object):
 
                 pred_final = np.append(pred_final, cost)
                 df_total[str(idx)] = pred_final
+
+                if (fill_mode != 'no') and save_shifted_result:
+                    pred_final_sf = np.append(pred_final_sf, cost)
+                    df_total_sf[str(idx)] = pred_final_sf
 
                 if len(pred_valid) < 34:
                     pred_valid = \
@@ -261,12 +269,19 @@ class GridSearch(object):
         df_total = df_total.stack().unstack(0)
         df_total.to_csv(join(
             cfg.log_path,
-            'all_results_{}_{}.csv'.format(
+            'all_results_{}{}.csv'.format(
                 self.sample_mode, append_info)))
         df_valid.to_csv(join(
             cfg.log_path,
-            'all_valid_{}_{}.csv'.format(
+            'all_valid_{}{}.csv'.format(
                 self.sample_mode, append_info)))
+
+        if save_shifted_result:
+            df_total_sf = df_total_sf.stack().unstack(0)
+            df_total_sf.to_csv(join(
+                cfg.log_path,
+                'all_results_sf_{}{}.csv'.format(
+                    self.sample_mode, append_info)))
 
         utils.thick_line()
         print('All Task Done! Using {:.2f}s...'.format(
@@ -321,10 +336,28 @@ if __name__ == '__main__':
 
     parameter_grid = [
         [
-            ['fill_mode', ['no', 'a_avg', 'a_line']],
+            ['fill_mode', ['no']],
             ['model_name', ['xgb']],
             ['start_year', [2009, 2011, 2012]],
             ['valid_range', [('2013-12-02', '2013-12-31')]],
+            ['feature_num', [21, 30, 60]],
+            ['time_features', [(5, 10, 20, 30, 60)]],
+            ['use_month_features', [True]],
+
+            ['learning_rate', [0.05, 0.1, 0.3]],
+            ['n_estimators', [100, 500]],
+            ['max_depth', [4, 6, 8]],
+            ['min_child_weight', [1, 3, 5]],
+            ['subsample', [0.85, 0.90, 0.95]],
+            ['colsample_bytree', [0.85, 0.9, 0.95]],
+            ['colsample_bylevel', [0.7, 0.8, 0.9]],
+            ['early_stopping_rounds', [None]]
+        ],
+        [
+            ['fill_mode', ['a_avg', 'a_line']],
+            ['model_name', ['xgb']],
+            ['start_year', [2009, 2011, 2012]],
+            ['valid_range', [('2013-12-01', '2013-12-31')]],
             ['feature_num', [21, 30, 60]],
             ['time_features', [(5, 10, 20, 30, 60)]],
             ['use_month_features', [True]],

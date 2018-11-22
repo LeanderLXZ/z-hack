@@ -1293,3 +1293,23 @@ def get_month_features():
     for i in range(1, len(months)):
         dict_pre[months[i]] = prices[i-1]
     return {'now': dict_now, 'pre': dict_pre}
+
+
+def save_importance(mode, idx, features_list, importance_list):
+
+    check_dir([cfg.log_path])
+    file_path = os.path.join(cfg.log_path,
+                             'feature_importance_{}.csv'.format(mode))
+
+    f_row = [idx, *features_list]
+    i_row = [idx, *importance_list]
+
+    if not os.path.isfile(file_path):
+        with open(file_path, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['idx'])
+
+    with open(file_path, 'a') as f:
+        writer = csv.writer(f)
+        writer.writerow(f_row)
+        writer.writerow(i_row)

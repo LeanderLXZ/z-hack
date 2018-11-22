@@ -152,11 +152,11 @@ class GridSearch(object):
         df_total = df_total.stack().unstack(0)
         df_total.to_csv(join(
             cfg.log_path,
-            'all_results_{}_{}.csv'.format(
+            'all_results_{}{}.csv'.format(
                 self.sample_mode, append_info)))
         df_valid.to_csv(join(
             cfg.log_path,
-            'all_valid_{}_{}.csv'.format(
+            'all_valid_{}{}.csv'.format(
                 self.sample_mode, append_info)))
 
         utils.thick_line()
