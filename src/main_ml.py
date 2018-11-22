@@ -57,6 +57,7 @@ class Training(object):
         valid_labels = []
         final_features = []
         final_labels = []
+
         for idx, date in enumerate(date_list):
             if date == train_start:
                 train_started = True
@@ -75,6 +76,7 @@ class Training(object):
                 valid_ended = True
             if idx == len(date_list) - 1:
                 assert labels[idx] == final_head[-1]
+
         return np.array(train_features), np.array(train_labels), \
                np.array(valid_head), np.array(valid_labels),\
                np.array(final_features), np.array(final_labels)
@@ -91,12 +93,16 @@ class Training(object):
         labels = []
         date_list = []
         pred_head = None
+
+        # Calculate start and end index
         feature_idx_end = np.max((feature_num, np.max(time_features)))
         if month_features:
             feature_idx_end = np.max((feature_idx_end, 31))
         feature_idx_start = feature_idx_end - feature_num
 
         while feature_idx_end < len(series):
+
+            # Convert time series to features
             feature = []
             date_list.append(date[feature_idx_end])
             for f_i, feature_num_i in enumerate(time_features):
@@ -104,13 +110,18 @@ class Training(object):
                     series[feature_idx_end-feature_num_i:feature_idx_end]))
             feature = np.append(
                 feature, series[feature_idx_start:feature_idx_end])
+
+            # Add month features
             if month_features:
                 month = self.data.index[feature_idx_end]
                 month_str = month.to_pydatetime().strftime('%Y-%m')
                 feature = np.append(
                     month_features['pre'][month_str], feature)
+
             features.append(feature)
             labels.append(series[feature_idx_end])
+
+            # Generate head feature for prediction
             if feature_idx_end == len(series) - 1:
                 feature = []
                 for f_i, feature_num_i in enumerate(time_features):
@@ -122,8 +133,10 @@ class Training(object):
                     month_str = month.to_pydatetime().strftime('%Y-%m')
                     pred_head = np.append(
                         month_features['now'][month_str], pred_head)
+
             feature_idx_start += 1
             feature_idx_end += 1
+
         return np.array(features), np.array(labels), \
                np.array(pred_head), date_list
 
@@ -202,6 +215,7 @@ class Training(object):
         else:
             raise ValueError('Wrong Fill Mode! Find: {}'.format(self.fill_mode))
 
+        # Unshifted results
         pred_final = pred_final_sf[:forecast_num]
 
         # Assign prediction to DataFrame
@@ -224,7 +238,7 @@ class Training(object):
         df_pred_sf.to_csv(join(
             shifted_result_path, 'result_sf{}.csv'.format(append_info)),
             float_format='%.2f')
-        return pred_final, pred_final_sf
+        return pred_final, df_pred_sf[['FORECASTPRICE']]
 
 
     def train(self,
@@ -245,12 +259,15 @@ class Training(object):
         else:
             month_features = None
 
+        # Get features
         features, labels, final_head, date_list = \
             self.series_to_features(
                 feature_num,
                 month_features=month_features,
                 time_features=time_features
             )
+
+        # Get train/valid data batches
         train_features, train_labels, valid_head, \
             valid_labels, final_features, final_labels = \
             self._train_valid_split(
@@ -264,6 +281,8 @@ class Training(object):
         #       valid_head, '\n',
         #       valid_labels, '\n',
         #       final_head, '\n')
+
+        # Get validation predictions
         pred_valid = MachineLearningModel(
             train_features, train_labels, valid_head,
             forecast_num=len(valid_labels)
@@ -275,9 +294,11 @@ class Training(object):
             idx=idx,
             mode='valid'
         )
+
+        # Calculate validation cost
         cost = self._calc_acc(valid_labels, pred_valid)
 
-        # Save shifted results for different fill modes
+        # Get final results for different fill modes
         if (self.fill_mode is not None) and save_shifted_result:
             pred_final, pred_final_sf = self.get_shifted_results(
                 model_name, final_features, final_labels, final_head,
