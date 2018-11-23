@@ -13,6 +13,9 @@ class Training(object):
                  select_col,
                  fill_mode=None):
 
+        if fill_mode == 'no':
+            fill_mode = None
+
         self.sample_mode = sample_mode
         self.select_col = select_col
         self.suffix = utils.get_suffix(sample_mode)
@@ -39,7 +42,7 @@ class Training(object):
                            valid_start,
                            valid_end):
 
-        if self.sample_mode == 'day':
+        if valid_start:
             train_started = False
             valid_started = False
             valid_ended = False
@@ -66,6 +69,18 @@ class Training(object):
                     valid_ended = True
             return np.array(train_data), np.array(valid_data), \
                    np.array(final_data)
+        else:
+            train_started = False
+            final_data = []
+            for row_iter in self.data.iterrows():
+                row = row_iter[1]
+                date_str = row_iter[0].to_pydatetime().strftime('%Y-%m-%d')
+                if date_str == train_start:
+                    train_started = True
+                if train_started:
+                    final_data.append(
+                        row['{}_{}'.format(self.select_col, self.suffix)])
+            return np.array(final_data)
 
     @staticmethod
     def _calc_acc(y, pred):
@@ -152,18 +167,26 @@ class Training(object):
               append_info=None):
 
         if data_range:
-            x_train, y, x_final = self._train_valid_split(
-                train_start=data_range['train_start'],
-                valid_start=data_range['valid_start'],
-                valid_end=data_range['valid_end'])
-            # print(x_train, y, x_final)
-            pred_valid = TimeSeriesModel(
-                x_train, freq, forecast_num=len(y),
-                seasonal=seasonal).predict(model_name)
+            if data_range['valid_start']:
+                x_train, y, x_final = self._train_valid_split(
+                    train_start=data_range['train_start'],
+                    valid_start=data_range['valid_start'],
+                    valid_end=data_range['valid_end'])
+                # print(x_train, y, x_final)
+                pred_valid = TimeSeriesModel(
+                    x_train, freq, forecast_num=len(y),
+                    seasonal=seasonal).predict(model_name)
+                cost = self._calc_acc(y, pred_valid)
+            else:
+                x_final = self._train_valid_split(
+                    train_start=data_range['train_start'],
+                    valid_start=data_range['valid_start'],
+                    valid_end=data_range['valid_end'])
+                pred_valid = None
+                cost = None
             pred_final = TimeSeriesModel(
                 x_final, freq, forecast_num,
                 seasonal=seasonal).predict(model_name)
-            cost = self._calc_acc(y, pred_valid)
 
             # Save shifted results for different fill modes
             if (self.fill_mode is not None) and save_shifted_result:
@@ -193,18 +216,34 @@ if __name__ == '__main__':
                      index_col=['FORECASTDATE'], usecols=['FORECASTDATE'])
     T = Training('day', 'CONTPRICE')
 
-    range_1 = {'train_start': '2011-01-04',
-               'valid_start': '2013-12-02',
-               'valid_end': '2013-12-31'}
+    range_1 = {'train_start': '2013-12-01',
+               'valid_start': None,
+               'valid_end': None}
 
-    df['arima_day'], _, _ = T.train(
-        'arima', freq=5, forecast_num=21, data_range=range_1, save_result=True)
-    df['stl_day'], _, _ = T.train(
-        'stl', freq=5, forecast_num=21, data_range=range_1, save_result=True)
-    df['ets_day'], _, _ = T.train(
-        'ets', freq=5, forecast_num=21, data_range=range_1, save_result=True)
-    df['hw_day'], _, _ = T.train(
-        'hw', freq=10, forecast_num=21, seasonal='multiplicative',
-        data_range=range_1, save_result=True)
+    for f_mode in ['no', 'w_ff', 'w_avg', 'w_line']:
+        df['arima_' + f_mode], _, _ = Training(
+            'day', 'CONTPRICE', f_mode
+        ).train(
+            'arima', freq=5, forecast_num=21,
+            data_range={'train_start': '2013-12-02',
+                        'valid_start': None,
+                        'valid_end': None},
+            save_result=True,
+            save_shifted_result=True,
+            append_info='_arima_' + f_mode
+        )
+
+    for f_mode in ['a_ff', 'a_avg', 'a_line']:
+        df['arima_' + f_mode], _, _ = Training(
+            'day', 'CONTPRICE', f_mode
+        ).train(
+            'arima', freq=7, forecast_num=21,
+            data_range={'train_start': '2013-12-01',
+                        'valid_start': None,
+                        'valid_end': None},
+            save_result=True,
+            save_shifted_result=True,
+            append_info='_arima_' + f_mode
+        )
 
     df.to_csv(join(cfg.log_path, 'result_day.csv'))

@@ -107,7 +107,8 @@ class GridSearch(object):
                                2010: '2010-01-04',
                                2011: '2011-01-04',
                                2012: '2010-01-04',
-                               2013: '2010-01-04'}
+                               2013: '2010-01-04',
+                               11: '2013-11-01'}
                 data_range = {'train_start': train_start[start_year],
                               'valid_start': valid_range[0],
                               'valid_end': valid_range[1]}
@@ -167,19 +168,72 @@ class GridSearch(object):
 
 if __name__ == '__main__':
 
-    parameter_grid = [
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                          ('2013-01-04', '2013-01-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['multiplicative']]],
+    # parameter_grid = [
+    #     [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
+    #      ['model_name', ('arima', 'stl', 'ets', 'hw')],
+    #      ['start_year', (2009, 2010, 2011, 2012)],
+    #      ['valid_range', [('2013-12-02', '2013-12-31'),
+    #                       ('2013-01-04', '2013-01-31')]],
+    #      ['frequency', (5, 10, 15, 20, 25, 30)],
+    #      ['hw_seasonal', ['multiplicative']]],
+    #
+    #     # start year 2013
+    #     [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
+    #      ['model_name', ('arima', 'stl', 'ets', 'hw')],
+    #      ['start_year', [2013]],
+    #      ['valid_range', [('2013-12-02', '2013-12-31')]],
+    #      ['frequency', (5, 10, 15, 20, 25, 30)],
+    #      ['hw_seasonal', ['multiplicative']]],
+    #
+    #     # fill_mode -- all date -- freq=7
+    #     [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
+    #      ['model_name', ('arima', 'stl', 'ets', 'hw')],
+    #      ['start_year', (2009, 2010, 2011, 2012)],
+    #      ['valid_range', [('2013-12-02', '2013-12-31'),
+    #                     ('2013-01-04', '2013-01-31')]],
+    #      ['frequency', (7, 14, 21, 28)],
+    #      ['hw_seasonal', ['multiplicative']]],
+    #     [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
+    #      ['model_name', ('arima', 'stl', 'ets', 'hw')],
+    #      ['start_year', [2013]],
+    #      ['valid_range', [('2013-12-02', '2013-12-31')]],
+    #      ['frequency', (7, 14, 21, 28)],
+    #      ['hw_seasonal', ['multiplicative']]],
+    #
+    #     # Holt-Winters -- additive
+    #     [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
+    #      ['model_name', ['hw']],
+    #      ['start_year', (2009, 2010, 2011, 2012)],
+    #      ['valid_range', [('2013-12-02', '2013-12-31'),
+    #                       ('2013-01-04', '2013-01-31')]],
+    #      ['frequency', (5, 10, 15, 20, 25, 30)],
+    #      ['hw_seasonal', ['additive']]],
+    #     [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
+    #      ['model_name', ['hw']],
+    #      ['start_year', [2013]],
+    #      ['valid_range', [('2013-12-02', '2013-12-31')]],
+    #      ['frequency', (5, 10, 15, 20, 25, 30)],
+    #      ['hw_seasonal', ['additive']]],
+    #     [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
+    #      ['model_name', ['hw']],
+    #      ['start_year', (2009, 2010, 2011, 2012)],
+    #      ['valid_range', [('2013-12-02', '2013-12-31'),
+    #                       ('2013-01-04', '2013-01-31')]],
+    #      ['frequency', (7, 14, 21, 28)],
+    #      ['hw_seasonal', ['additive']]],
+    #     [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
+    #      ['model_name', ['hw']],
+    #      ['start_year', [2013]],
+    #      ['valid_range', [('2013-12-02', '2013-12-31')]],
+    #      ['frequency', (7, 14, 21, 28)],
+    #      ['hw_seasonal', ['additive']]]
+    # ]
 
-        # start year 2013
+    parameter_grid = [
+        # start 2013-11
         [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
          ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', [2013]],
+         ['start_year', [11]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
          ['frequency', (5, 10, 15, 20, 25, 30)],
          ['hw_seasonal', ['multiplicative']]],
@@ -187,14 +241,7 @@ if __name__ == '__main__':
         # fill_mode -- all date -- freq=7
         [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
          ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                        ('2013-01-04', '2013-01-31')]],
-         ['frequency', (7, 14, 21, 28)],
-         ['hw_seasonal', ['multiplicative']]],
-        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
-         ['model_name', ('arima', 'stl', 'ets', 'hw')],
-         ['start_year', [2013]],
+         ['start_year', [11]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
          ['frequency', (7, 14, 21, 28)],
          ['hw_seasonal', ['multiplicative']]],
@@ -202,27 +249,13 @@ if __name__ == '__main__':
         # Holt-Winters -- additive
         [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
          ['model_name', ['hw']],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                          ('2013-01-04', '2013-01-31')]],
-         ['frequency', (5, 10, 15, 20, 25, 30)],
-         ['hw_seasonal', ['additive']]],
-        [['fill_mode', ('no', 'w_ff', 'w_avg', 'w_line')],
-         ['model_name', ['hw']],
-         ['start_year', [2013]],
+         ['start_year', [11]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
          ['frequency', (5, 10, 15, 20, 25, 30)],
          ['hw_seasonal', ['additive']]],
         [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
          ['model_name', ['hw']],
-         ['start_year', (2009, 2010, 2011, 2012)],
-         ['valid_range', [('2013-12-02', '2013-12-31'),
-                          ('2013-01-04', '2013-01-31')]],
-         ['frequency', (7, 14, 21, 28)],
-         ['hw_seasonal', ['additive']]],
-        [['fill_mode', ('a_ff', 'a_avg', 'a_line')],
-         ['model_name', ['hw']],
-         ['start_year', [2013]],
+         ['start_year', [11]],
          ['valid_range', [('2013-12-02', '2013-12-31')]],
          ['frequency', (7, 14, 21, 28)],
          ['hw_seasonal', ['additive']]]
